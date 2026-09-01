@@ -90,14 +90,21 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
    å gjenskape GBM.
 9. Resultater: vifte, akkumulert og NPV-fordeling.
 10. Horisont 2026-2050 (Sokkeldirektoratets mulighetsbilder slutter 2050).
+11. Forankring: prisen var først MEDIANforankret. Endret 01.09.2026 (avklart
+    med brukeren) til FORVENTNINGSforankring, fordi NB26-banen er en
+    forventningsbane, ikke en median: E[SNCF] skal være lik NB26-basis. Bakt
+    inn i MC-motoren via `build_workbook.py` (Jensen-korreksjon på logpris,
+    E[Mo]=E[Mg]=1; volumfaktoren delt på E[volfaktor]=1+(fh+fl-2)/6).
 
 ## Verifikasjoner (må holdes ved endringer)
 
 - Kontrollkolonnen i Statisk modell = 0 hvert år (basis == NB26 SNKS).
 - Inntekter - kostnader == Formue-fanens NKS på maskinpresisjon (1e-16).
 - Excel-motor vs Python på identiske 2 000 trekk: avvik < 0,03 i persentiler.
-- Sum av årsmedianer (MC) ~= kumulativ basis (4 982 vs 4 861, avvik 2,5 pst.
-  = simuleringsstøy).
+- Middel (MC) ~= kumulativ basis: 4 823 mot 4 861 på de 2 000 faste trekkene
+  (avvik 0,8 pst. = samplingsstøy i det faste utvalget; ~4 863 ved 200 000).
+- Excel-motor vs. Python (mc_simulering.py) på identiske formler: eksakt match
+  (verifisert med `formulas`-biblioteket, avvik 0).
 - recalc uten formelfeil (159 000 formler).
 
 ## Kjente feller i tallgrunnlaget (funnet og løst — ikke gjeninnfør dem)
@@ -119,9 +126,11 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
 2. Ingen tilbudsrespons: negative SNCF-år (ca. 10 pst. av observasjonene,
    sent i perioden) overdriver nedsiden. Presedens finnes (negative påløpte
    petroleumsskatter i 2020).
-3. Medianforankring: NB26-banen er MEDIANEN per år, ikke forventningen.
-   Kumulativ MC-median (5 715) > kumulativ basis (4 861) pga. høyreskjevhet
-   — dette er statistikk, ikke feil. Sum av årsmedianer = basis.
+3. Forventningsforankring: NB26-banen er FORVENTNINGSbanen, og simuleringen
+   er forankret slik at E[SNCF] = NB26-basis i både pris og volum. Pga.
+   lognormal høyreskjevhet ligger MC-MEDIANEN noe UNDER middelet/basis (kum.
+   median ~4 606 mot middel ~4 823 på de 2 000 faste trekkene) — det er
+   statistikk, ikke feil.
 4. Valutakurs implisitt i prisbanene.
 5. Kalibrering på 28 årsobservasjoner uten ekstern kryssjekk.
 
@@ -129,8 +138,11 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
 
 - 3x3 NPV (3 pst.): basis/basis 3 753; spenn -322 (høy vol/lav pris — mer
   volum taper mer ved negative marginer) til 11 688 mrd.
-- MC NPV 3 pst.: P10 2 378 / P50 4 367 / P90 7 000, middel 4 559 mrd.
-- Akkumulert 2026-2050: P10 3 053 / P50 5 715 / P90 9 216 mrd.
+- MC NPV 3 pst. (forventningsforankret): P10 1 782 / P50 3 564 / P90 5 859,
+  middel 3 712 mrd. (middel = basis; median under pga. høyreskjevhet).
+- Akkumulert 2026-2050: P10 2 256 / P50 4 606 / P90 7 680 mrd.
+- OBS: SVG-figurene (vifte, akkumulert, fordelinger) er ennå fra den
+  median-forankrede versjonen og skal regenereres (utsatt runde).
 - NB26s egen formuesberegning (statens del, 2026-2090, 3 pst.): 4 721 mrd.
   Differansen mot vår NPV (3 753) er halen 2051-2090 (968 mrd. i nåverdi).
 
