@@ -43,6 +43,11 @@ formuesforvaltning. Alle beløp i faste 2026-kroner.
   - **Dokumentasjon**: antakelser, begrensninger, kilder.
 - `mc_simulering.py` — valgfri Python-referanse; leser parametre fra
   arbeidsboken. 10 000 simuleringer. Brukes til verifikasjon.
+- `build_workbook.py` — regenererer MC-motoren fra input og baker inn
+  forventningsforankringen (Jensen på pris, mean-1 på volum). Bevarer de
+  faste trekkene og de synlige arkene.
+- `lag_figurer.py` — regenererer de tre SVG-figurene fra de forventnings-
+  forankrede tallene (FINs designprofil), lest fra de 2 000 faste trekkene.
 - `viftefigur_sncf.svg` — tetthetsvifte for årlig SNCF (gradert opasitet,
   kuttet ved 5-95-persentil, median hvit med mørk kontur, NB26-basis rød
   stiplet).
@@ -143,9 +148,10 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
   volum taper mer ved negative marginer) til 11 688 mrd.
 - MC NPV 3 pst. (forventningsforankret): P10 1 782 / P50 3 564 / P90 5 859,
   middel 3 712 mrd. (middel = basis; median under pga. høyreskjevhet).
-- Akkumulert 2026-2050: P10 2 256 / P50 4 606 / P90 7 680 mrd.
-- OBS: SVG-figurene (vifte, akkumulert, fordelinger) er ennå fra den
-  median-forankrede versjonen og skal regenereres (utsatt runde).
+- Akkumulert 2026-2050: P10 2 256 / P25 3 268 / P50 4 606 / P75 6 037 /
+  P90 7 680 mrd.
+- SVG-figurene er regenerert med de forventningsforankrede tallene
+  (`lag_figurer.py`). Middelverdi ~= basis, median under (høyreskjevhet).
 - NB26s egen formuesberegning (statens del, 2026-2090, 3 pst.): 4 721 mrd.
   Differansen mot vår NPV (3 753) er halen 2051-2090 (968 mrd. i nåverdi).
 
