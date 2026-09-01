@@ -157,6 +157,17 @@ def _doc_sync(wb):
         "både pris og volum (E[pris]=NB26 via Jensen-korreksjon på logpris; "
         "E[volumfaktor]=1). Pga. lognormal høyreskjevhet ligger medianbanen "
         "noe under forventningen - det er statistikk, ikke feil.")
+    # Estimeringsusikkerhet i sigma/kappa (antakelse #7) - punktestimater brukt
+    # som sentrale, usikkerheten dokumentert (jf. brukervalg).
+    a15 = dok["A15"].value
+    if "relativ standardfeil" not in a15:
+        dok["A15"] = a15 + (
+            " Standardavvikene (sigma_olje 0,2325 / sigma_gass 0,3856) og "
+            "reverteringsfarten (kappa) er dermed estimert paa faa "
+            "observasjoner: sigma har om lag 14 pst. relativ standardfeil, og "
+            "kappa er mer usikker og nedadbiaset paa kort utvalg. "
+            "Punktestimatene brukes som sentrale; usikkerheten tilsier en "
+            "foelsomhet paa sigma/kappa som egen kjoering (utsatt).")
     mc = wb["Monte Carlo"]
     mc["A2"] = mc["A2"].value.replace("medianforankret", "forventningsforankret")
     mc["B47"] = "forventning = NB26-banen (E[pris]=NB26)"

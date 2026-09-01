@@ -132,7 +132,10 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
    median ~4 606 mot middel ~4 823 på de 2 000 faste trekkene) — det er
    statistikk, ikke feil.
 4. Valutakurs implisitt i prisbanene.
-5. Kalibrering på 28 årsobservasjoner uten ekstern kryssjekk.
+5. Kalibrering på 28 årsobservasjoner uten ekstern kryssjekk. Sigma
+   (0,2325/0,3856) har ~14 pst. relativ standardfeil; kappa er mer usikker og
+   nedadbiaset på kort utvalg. Punktestimatene brukes som sentrale;
+   estimeringsusikkerheten er dokumentert (følsomhet på sigma/kappa utsatt).
 
 ## Nøkkeltall (2 000 sim., frø 2026)
 
