@@ -44,6 +44,14 @@ C_Z1, C_Z2 = 3, 28
 C_LMO, C_LMG, C_SNCF = 53, 78, 103
 C_NPV3, C_NPV2, C_NPV4, C_KUM = 128, 129, 130, 131
 
+# Statiske prisskift for 3x3-en (scenarioverktøy): historiske persentiler
+# (P90/P50 og P10/P50) av realpris 1997-2024, RE-SENTRERT på NB26 ved å dele
+# på det geometriske senteret, slik at "høy" og "lav" er symmetriske rundt
+# anker-banen (geo-senter = 1). Da svarer 3x3-en på "vedvarende høy-/lav-
+# prisregime rundt NB26", mens MC-viften gir sannsynlighetsfordelingen.
+HIST_SHIFTS = {"olje_hoy": 1.4305, "olje_lav": 0.523,
+               "gass_hoy": 2.0153, "gass_lav": 0.5747}
+
 
 def build(template=TEMPLATE, out=OUT, n=2000, draws=None, doc_sync=True):
     wb = load_workbook(template)
@@ -137,6 +145,8 @@ def build(template=TEMPLATE, out=OUT, n=2000, draws=None, doc_sync=True):
         ws.cell(row, C_NPV4, f"=NPV(Forutsetninger!$B$10,{rng})")
         ws.cell(row, C_KUM, f"=SUM({rng})")
 
+    _recenter_price_shifts(wb)
+
     if doc_sync:
         _doc_sync(wb)
 
@@ -146,6 +156,27 @@ def build(template=TEMPLATE, out=OUT, n=2000, draws=None, doc_sync=True):
 
     wb.save(out)
     return out
+
+
+def _recenter_price_shifts(wb):
+    """Skriv re-sentrerte statiske prisskift til Forutsetninger B4-B7.
+
+    Idempotent: verdiene beregnes alltid fra de dokumenterte historiske
+    konstantene (HIST_SHIFTS), ikke fra cellenes nåværende innhold, ved å dele
+    på det geometriske senteret så høy/lav er symmetrisk rundt NB26.
+    """
+    import math
+    fu = wb["Forutsetninger"]
+    goO = math.sqrt(HIST_SHIFTS["olje_hoy"] * HIST_SHIFTS["olje_lav"])
+    goG = math.sqrt(HIST_SHIFTS["gass_hoy"] * HIST_SHIFTS["gass_lav"])
+    fu["B4"] = HIST_SHIFTS["olje_hoy"] / goO
+    fu["B5"] = HIST_SHIFTS["olje_lav"] / goO
+    fu["B6"] = HIST_SHIFTS["gass_hoy"] / goG
+    fu["B7"] = HIST_SHIFTS["gass_lav"] / goG
+    fu["A4"] = "k_olje_høy (P90/P50, re-sentrert NB26)"
+    fu["A5"] = "k_olje_lav (P10/P50, re-sentrert NB26)"
+    fu["A6"] = "k_gass_høy (P90/P50, re-sentrert NB26)"
+    fu["A7"] = "k_gass_lav (P10/P50, re-sentrert NB26)"
 
 
 def _doc_sync(wb):
@@ -171,6 +202,19 @@ def _doc_sync(wb):
     mc = wb["Monte Carlo"]
     mc["A2"] = mc["A2"].value.replace("medianforankret", "forventningsforankret")
     mc["B47"] = "forventning = NB26-banen (E[pris]=NB26)"
+
+    # Scenario vs. sannsynlighet: presiser hva 3x3-ens høy/lav betyr.
+    sm = wb["Statisk modell"]
+    sm["A47"] = ("Merk: 'Høy/lav pris' er historiske persentiler (P90/P10) "
+                 "re-sentrert på NB26 - et scenario for et VEDVARENDE høy-/"
+                 "lavprisregime, ikke MC-viftens P10/P90 (sannsynlighet per år).")
+    dok = wb["Dokumentasjon"]
+    dok["A23"] = ("STATISK 3x3 vs. MONTE CARLO: 3x3-en er et scenarioverktøy - "
+                  "høy/lav pris er re-sentrerte historiske persentiler (symmetrisk "
+                  "rundt NB26) som beskriver vedvarende pris-/volumregimer. "
+                  "MC-viften er sannsynlighetsverktøyet - P10/P90 er persentiler "
+                  "av det faktiske utfallet år for år. De to svarer på ulike "
+                  "spørsmål og skal ikke forventes å gi samme høy/lav-tall.")
 
 
 if __name__ == "__main__":

@@ -65,9 +65,11 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
   eksplisitt skattemodell. andel = SNKS / (inntekter - kostnader).
 - **volfaktor**: 1 i basis; totalbane_høy/basis eller lav/basis ellers.
   Skalerer både inntekter og kostnader (konstante enhetskostnader).
-- **Priser**: NB26-baner per Sm3 o.e. Statiske skift: historiske persentiler
-  (P90/P50 og P10/P50 av realpris 1997-2024): olje 1,430/0,523, gass
-  2,015/0,575. NGL følger olje.
+- **Priser**: NB26-baner per Sm3 o.e. Statiske skift (3x3): historiske
+  persentiler (P90/P50, P10/P50 av realpris 1997-2024), RE-SENTRERT på NB26
+  (delt på geo-senter så høy/lav er symmetrisk rundt banen): olje 1,654/0,605,
+  gass 1,873/0,534. NGL følger olje. 3x3 = scenario (vedvarende regime); MC =
+  sannsynlighet (se beslutningslogg #12).
 - **Monte Carlo**: volum = ETT triangulærtrekk per simulering (w i [-1,1])
   som interpolerer lav/basis/høy for hele banen. Pris = gjennomsnitts-
   reverterende OU på logpris, MEDIANFORANKRET i NB26-banen. Estimert med
@@ -100,6 +102,12 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
     forventningsbane, ikke en median: E[SNCF] skal være lik NB26-basis. Bakt
     inn i MC-motoren via `build_workbook.py` (Jensen-korreksjon på logpris,
     E[Mo]=E[Mg]=1; volumfaktoren delt på E[volfaktor]=1+(fh+fl-2)/6).
+12. 3x3 er et SCENARIOverktøy, MC et SANNSYNLIGHETSverktøy — de svarer på
+    ulike spørsmål og skal ikke ha samme høy/lav. De statiske prisskiftene ble
+    re-sentrert på NB26 01.09.2026 (avklart med brukeren): de rå historiske
+    persentilene var ikke sentrert på anker-banen (geo-senter olje 0,87, gass
+    1,08), noe som blåste opp de negative lavpris-hjørnene. Bakt inn i
+    `build_workbook.py` (`_recenter_price_shifts`, idempotent fra HIST_SHIFTS).
 
 ## Verifikasjoner (må holdes ved endringer)
 
@@ -123,6 +131,9 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
   NB26 (annen årgang). NB26 er eneste tallgrunnlag; SD brukes kun til
   totalbanene høy/lav (fig. 1.10).
 - Skaleringsfeil å unngå: vekstfaktor fra C til D er (D-C)/C, ikke (D-C)/D.
+- De rå historiske prisskiftene var IKKE sentrert på NB26 (geo-senter olje
+  0,87, gass 1,08) — de bar med seg den historiske medianens skjevhet. Nå
+  re-sentrert. Ikke gjeninnfør rå P90/P10 som skift uten sentrering.
 
 ## Sentrale antakelser og forbehold (i prioritert rekkefølge)
 
@@ -144,8 +155,11 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
 
 ## Nøkkeltall (2 000 sim., frø 2026)
 
-- 3x3 NPV (3 pst.): basis/basis 3 753; spenn -322 (høy vol/lav pris — mer
-  volum taper mer ved negative marginer) til 11 688 mrd.
+- 3x3 NPV (3 pst.): basis/basis 3 753; spenn 33 (høy vol/lav pris) til
+  12 524 mrd. (re-sentrerte prisskift). NB: de dype negative hjørnene i den
+  gamle versjonen (-322) var delvis artefakt av usentrerte skift. Reell
+  netto-negativ nedside fanges av MC-viften (~10 pst. av årene) og av
+  tilbudsrespons-varianten (utsatt).
 - MC NPV 3 pst. (forventningsforankret): P10 1 782 / P50 3 564 / P90 5 859,
   middel 3 712 mrd. (middel = basis; median under pga. høyreskjevhet).
 - Akkumulert 2026-2050: P10 2 256 / P25 3 268 / P50 4 606 / P75 6 037 /
