@@ -175,6 +175,12 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
     forventningsbane, ikke en median: E[SNCF] skal være lik NB26-basis. Bakt
     inn i MC-motoren via `build_workbook.py` (Jensen-korreksjon på logpris,
     E[Mo]=E[Mg]=1; volumfaktoren delt på E[volfaktor]=1+(fh+fl-2)/6).
+12. 3x3 er et SCENARIOverktøy, MC et SANNSYNLIGHETSverktøy — de svarer på
+    ulike spørsmål og skal ikke ha samme høy/lav. De statiske prisskiftene ble
+    re-sentrert på NB26 01.09.2026 (avklart med brukeren): de rå historiske
+    persentilene var ikke sentrert på anker-banen (geo-senter olje 0,87, gass
+    1,08), noe som blåste opp de negative lavpris-hjørnene. Bakt inn i
+    `build_workbook.py` (`_recenter_price_shifts`, idempotent fra HIST_SHIFTS).
 13. REFORMULERT MODELL (02.09.2026, avklart med brukeren): 3x3-en med
     vilkårlige multiplikatorer er FORLATT. Erstattet av én Monte Carlo på
     basisproduksjon der PERSENTILENE SELV ER SCENARIENE (P90 = høy prognose,
@@ -210,12 +216,6 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
     horisont og rente ikke forklarer det. De to tallene skal derfor ikke
     presenteres som samme størrelse. Punkt 5 i beslutningsloggen om «vis begge
     horisonter» er dermed oppfylt, men med det forbeholdet.
-12. 3x3 er et SCENARIOverktøy, MC et SANNSYNLIGHETSverktøy — de svarer på
-    ulike spørsmål og skal ikke ha samme høy/lav. De statiske prisskiftene ble
-    re-sentrert på NB26 01.09.2026 (avklart med brukeren): de rå historiske
-    persentilene var ikke sentrert på anker-banen (geo-senter olje 0,87, gass
-    1,08), noe som blåste opp de negative lavpris-hjørnene. Bakt inn i
-    `build_workbook.py` (`_recenter_price_shifts`, idempotent fra HIST_SHIFTS).
 
 ## Verifikasjoner (må holdes ved endringer)
 
@@ -349,14 +349,15 @@ forutsetningsforskjell, ikke en regnemåte.
 Fordeling 2026-2060, NNV 4 pst. (2 000 faste trekk): medianforankret
 P10 552 / P50 3 759 / P90 9 688, middel 4 566; forventningsforankret
 P10 255 / P50 2 975 / P90 8 349, middel 3 762.
-- NB26s egen formuesberegning (statens del): 4 721 mrd. RETTET 02.09.2026 —
-  tallet er NNV med 3 pst. av SNKS **2025**-2090 **datert 2024** (Excels
-  `NPV(3%; 2025:2090)` på Formue rad 84), ikke 2026-2090 datert 2025.
-  Verifisert til 4 721,1 mot Formue rad 100 på maskinpresisjon. Den tidligere
-  påstanden om at differansen mot vår NPV (3 753) var «halen 2051-2090
-  (968 mrd.)» er FEIL: 968 var i hovedsak 2025-kontantstrømmen (684 mrd.)
-  pluss ett års diskonteringsforskjell. Den faktiske halen 2051-2090 er verdt
-  425 mrd. med 3 pst. datert 2025.
+
+NB26s egen formuesberegning (statens del): 4 721 mrd. RETTET 02.09.2026 —
+tallet er NNV med 3 pst. av SNKS **2025**-2090 **datert 2024** (Excels
+`NPV(3%; 2025:2090)` på Formue rad 84), ikke 2026-2090 datert 2025.
+Verifisert til 4 721,1 mot Formue rad 100 på maskinpresisjon. Den tidligere
+påstanden om at differansen mot vår NPV (3 753) var «halen 2051-2090
+(968 mrd.)» er FEIL: 968 var i hovedsak 2025-kontantstrømmen (684 mrd.)
+pluss ett års diskonteringsforskjell. Den faktiske halen 2051-2090 er verdt
+425 mrd. med 3 pst. datert 2025.
 
 ## Naturlige neste steg
 
