@@ -236,22 +236,47 @@ så ved +3,4 pp begynner kostnadene å vokse svakt). Halen er liten og ligger
 langt ute i diskonteringen, så konklusjonen henger ikke på
 ekstrapoleringsvalget.
 
-Halekontroll mot NB26: NB26s egen formuesberegning (statens del, 2026-2090,
-3 pst.) er 4 721 mrd., som impliserer en hale etter 2050 verdt om lag 968 mrd.
-Modellens ekstrapolerte hale 2051-2090 er 415 mrd., og selv FLAT produksjon på
-2050-nivået helt til 2090 gir bare 881 mrd. — altså under NB26s implisitte
-tall. Ekstrapoleringen er om noe konservativ, og forklarer ikke differansen.
+### Halekontroll — RETTET 02.09.2026, og en feil i tidligere dokumentasjon
 
-Gjenstående kandidater for de ~1 100 mrd., i prioritert rekkefølge:
-1. Årgang: 4 800 er fra Perspektivmeldingen, ikke NB26. Prisbaner og
-   produksjonsanslag kan være en annen årgang. Repoet har ingen PM-data, så
-   dette kan ikke sjekkes herfra.
-2. Prisbasis: er PM-tallet i 2025-kroner og ikke 2026-kroner, skal det ganges
-   opp med ett års utgiftsdeflator. Det ØKER PM-tallet til 4 944 og utvider
-   differansen. Cellen B14 på arket gjør justeringen; den står på 1 fordi
-   prisbasisen ikke er verifisert.
-3. Omfang: hva PM regner med i kontantstrømmen som ikke ligger i
-   NB26-grunnlaget slik det er rekonstruert her.
+NB26s egen SNKS-bane går til 2090 i kildefilen (`Mulighetsbilde
+Petroleum.xlsx`, Formue rad 84, verifisert identisk med Forutsetninger!N for
+2026-2050). Halen trenger altså ikke gjettes.
+
+| | modellens ekstrapolering | NB26s egen bane |
+|---|---|---|
+| Hale 2051-2060, udiskontert | 599 | 629 |
+| Hale 2051-2060, NNV 4 pst. | 186 | 194 |
+| Hale 2051-2090, NNV 3 pst. | 415 | 425 |
+| NNV 4 pst. 2026-2060 | 3 663 | **3 671** |
+
+Ekstrapoleringen traff altså 2-4 pst. lavt — den er **validert mot kilden**, og
+gapet mot 4 800 er uendret.
+
+**FEIL I TIDLIGERE DOKUMENTASJON, nå rettet:** påstanden om at NB26s
+formuesberegning er «2026-2090 med 3 pst. = 4 721» og at differansen mot vår
+3 753 «er halen 2051-2090 (968 mrd.)» holder ikke. Tallet 4 721,1 er
+`NPV(3%; SNKS 2025:2090)` — altså fra **2025** og **datert 2024** (Excels NPV
+daterer ett år før første beløp). Verifisert til 4 721,1 mot Formue rad 100 på
+maskinpresisjon. De «968» var i hovedsak 2025-kontantstrømmen (684 mrd.)
+pluss ett års diskontering, ikke halen. Modellen har dermed INGEN uforklart
+differanse mot NB26 — den reproduserer NB26 der horisontene overlapper.
+
+### Gapet mot 4 800 er ikke en definisjonsforskjell
+
+Testet på NB26s egen bane, med 4 pst.:
+
+| definisjon | mrd. | mot 4 800 |
+|---|---|---|
+| 2026-2060, datert 2025 (deckets ordlyd) | 3 671 | −1 129 |
+| 2025-2060, datert 2024 | 4 188 | −612 |
+| 2025-2090, datert 2024 (som NB26s formuesber.) | 4 294 | −506 |
+| 2025-2090, datert 2025 | 4 466 | −334 |
+
+Ingen omdatering eller omhorisontering kommer opp til 4 800. Differansen
+ligger derfor i at PM bygger på en materielt høyere kontantstrømbane enn NB26
+— en årgangs- eller forutsetningsforskjell, ikke en regnemåte. Repoet har
+ingen PM-data, så hvilken av forutsetningene som skiller, kan ikke avgjøres
+herfra.
 
 **Konsekvens for leveransen: 4 800 og modellens tall skal IKKE presenteres som
 samme størrelse.** Den tidligere merknaden om at likheten mellom 4 800 og

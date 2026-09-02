@@ -331,20 +331,32 @@ med 3 pst. Robusthet: et påslag på alle nedgangsrater fra 0 til +5 prosentpoen
 (der +3,4 pp gir tilnærmet flat oljeproduksjon) flytter tallet bare fra 3 663
 til 3 716. Konklusjonen henger ikke på ekstrapoleringsvalget.
 
-Halekontroll: NB26s egen formuesberegning (statens del, 2026-2090, 3 pst.)
-er 4 721 mrd., som impliserer at halen etter 2050 er verdt om lag 968 mrd.
-Modellens ekstrapolerte hale 2051-2090 er 415 mrd., og selv FLAT produksjon
-på 2050-nivået til 2090 gir bare 881 mrd. Ekstrapoleringen er altså om noe
-konservativ og forklarer ikke differansen mot PM-tallet. Gjenstående
-kandidater: årgang (PM mot NB26), prisbasis (er PM i 2025-kroner, øker
-PM-tallet til 4 944 og differansen vokser), og hva PM regner med som ikke
-ligger i NB26-grunnlaget.
+Halekontroll (RETTET 02.09.2026): NB26s egen SNKS-bane går faktisk til 2090 i
+kildefilen (Formue rad 84), så halen kan leses av i stedet for å gjettes. Den
+er verdt 425 mrd. med 3 pst. datert 2025 for 2051-2090, og 194 mrd. med
+4 pst. for 2051-2060. Modellens ekstrapolering ga 415 og 186 — altså 2-4 pst.
+lavt. **Ekstrapoleringen er dermed validert mot kilden.** Med NB26s egen hale
+blir NNV 4 pst. 2026-2060 3 671 mrd., mot ekstrapoleringens 3 663; gapet mot
+4 800 er uendret.
+
+Gapet er heller ikke en definisjonsforskjell. Ingen omdatering eller
+omhorisontering av NB26s egen bane kommer opp til 4 800 med 4 pst.: det
+høyeste er 4 466 (2025-2090 datert 2025), og deckets egen definisjon
+(2026-2060, NNV i 2025) gir 3 671. Differansen ligger altså i at PM bygger på
+en materielt høyere kontantstrømbane enn NB26 — en årgangs- eller
+forutsetningsforskjell, ikke en regnemåte.
 
 Fordeling 2026-2060, NNV 4 pst. (2 000 faste trekk): medianforankret
 P10 552 / P50 3 759 / P90 9 688, middel 4 566; forventningsforankret
 P10 255 / P50 2 975 / P90 8 349, middel 3 762.
-- NB26s egen formuesberegning (statens del, 2026-2090, 3 pst.): 4 721 mrd.
-  Differansen mot vår NPV (3 753) er halen 2051-2090 (968 mrd. i nåverdi).
+- NB26s egen formuesberegning (statens del): 4 721 mrd. RETTET 02.09.2026 —
+  tallet er NNV med 3 pst. av SNKS **2025**-2090 **datert 2024** (Excels
+  `NPV(3%; 2025:2090)` på Formue rad 84), ikke 2026-2090 datert 2025.
+  Verifisert til 4 721,1 mot Formue rad 100 på maskinpresisjon. Den tidligere
+  påstanden om at differansen mot vår NPV (3 753) var «halen 2051-2090
+  (968 mrd.)» er FEIL: 968 var i hovedsak 2025-kontantstrømmen (684 mrd.)
+  pluss ett års diskonteringsforskjell. Den faktiske halen 2051-2090 er verdt
+  425 mrd. med 3 pst. datert 2025.
 
 ## Naturlige neste steg
 
