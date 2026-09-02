@@ -9,11 +9,18 @@ Gren: `claude/sncf-anchor-calibrate-smb2ii` (bygger på PR #1-grenen
 `claude/claude-md-review-verify-70a7je`, som er merget inn).
 Se `CLAUDE (1).md` for full modelldokumentasjon.
 
-## 1. FORANKRING — avklart faglig, venter på brukerens bekreftelse
+## 1. FORANKRING — AVKLART 02.09.2026: BEGGE SKAL VISES
 
-Brukeren mener **P50 (median) bør = NB26-basis**. Begge forankringer er kjørt.
-`MEDIAN_ANCHOR` i `mc_reformulert.py` er satt til `True` (medianforankring) som
-anbefalt utgangspunkt.
+**Brukerens beslutning: vis begge forankringer i leveransen.** Medianforankring
+er hovedsporet (P50 = NB26), forventningsforankring følger som følsomhet i eget
+ark, slik at Jensen-effekten blir eksplisitt for leseren i stedet for skjult i
+et metodevalg. `mc_reformulert.py` rapporterer nå begge side om side
+(`python3 mc_reformulert.py`).
+
+Konsekvens for bygging: Excel-leveransen trenger to persentilsett fra samme
+motor. Det er billig — forskjellen er én multiplikativ driftsfaktor på
+prisfaktoren, så MC-motoren kan beholde ett sett trekk og bare skalere prisen.
+Ikke to motorer.
 
 Hvorfor de to skiller seg: prisen er en lognormal faktor. For lognormal er
 median = exp(-0,5σ²) < mean = 1. Forventningsforankring (E[faktor]=1) presser
@@ -34,7 +41,7 @@ basis 4 861:
 | NPV 3 pst. P50 | 3 105 (−17,3 pst.) | 3 874 (+3,2 pst.) |
 | Impliert oljepris P50 | 63 USD/fat | 68 USD/fat (= basis) |
 
-**Anbefaling: medianforankring.** Tre grunner:
+Faglig begrunnelse for at medianforankring er HOVEDsporet (tre grunner):
 1. Basis er IEA WEO APS (deck slide 5) — et *scenario*, ikke et
    sannsynlighetsvektet gjennomsnitt. IEA presiserer selv at scenariene ikke er
    prognoser. Et scenario merket «sentralt» leses naturlig som «like sannsynlig
@@ -103,17 +110,54 @@ Holder man historisk sigma fast, faller IEA-scenariene på:
 - NZE (25 USD) → **P0,5** — en 1-av-200-hendelse.
 
 Altså: den historiske kalibreringen behandler en NZE-verden som nærmest
-utelukket. Det er en **politisk-faglig vurdering brukeren må ta stilling til**,
-ikke noe modellen kan avgjøre. Historikken 1997-2024 er en verden uten
-gjennomført energiomstilling; kalibrerer man på den, antar man implisitt at
-omstillingsrisikoen ligner fortidens prisrisiko. Tre veier:
-- **(a) Ren historisk** (anbefalt som hovedspor): forsvarlig, verifiserbart,
-  konsistent med den statiske modellen. Opplys i Dokumentasjon at NZE er P0,5.
-- **(b) Hybrid**: nedsiden forankret i NZE (omstillingsrisiko), oppsiden i
-  historikk/terminvolatilitet siden IEA mangler høyprisscenario. Krever
-  splitt-lognormal — som er implementert. Gir en tydelig skjev vifte.
-- **(c) NZE som eksplisitt sidescenario** utenfor viften, ikke som persentil.
-  Kommuniserer best: viften viser markedsrisiko, NZE viser politikkrisiko.
+utelukket. Det er en **politisk-faglig vurdering**, ikke noe modellen kan
+avgjøre. Historikken 1997-2024 er en verden uten gjennomført energiomstilling;
+kalibrerer man på den, antar man implisitt at omstillingsrisikoen ligner
+fortidens prisrisiko.
+
+### Forsoningspunktet — det mest interessante funnet
+`kalibrering.py forsoningspunkt()` løser hvilken nedside-sigma som gir
+E = median = basis samtidig (medianen i splitt-lognormalen er alltid 1; er også
+forventningen 1, faller de to forankringene sammen og hele spørsmålet i punkt 1
+forsvinner for den varen). Lukket form:
+E = e^(σ_ned²/2)·Φ(−σ_ned) + e^(σ_opp²/2)·Φ(σ_opp).
+
+- **Olje:** forsoning ved σ_ned = 0,780, altså **P10 = 25,0 USD/fat**. Det er
+  praktisk talt identisk med det (uverifiserte) NZE-tallet 25. Med
+  hybridkalibrering blir E[oljefaktor] = 1,0005 — median og forventning
+  sammenfaller, og oljeprisen blir 25 / 68 / 112 / middel 68 i BEGGE
+  forankringer. Sammenfallet er tilfeldig, ikke utledet, og hviler på et tall
+  som må verifiseres. Men det peker på noe reelt: median-vs-forventning-
+  problemet er et symptom på at nedsiden i den historiske fordelingen er for
+  TYNN, ikke et iboende metodeproblem.
+- **Gass:** forsoning ville krevd σ_ned = 1,306, altså **P10 = 1,07 USD/MMBtu**.
+  Ingen IEA-scenario er i nærheten. Gass kan derfor ikke forsones slik, og et
+  middel/median-gap på gass står uansett igjen og må opplyses.
+
+### Kjørte tall for hybrid (nedside olje = NZE 25, gass historisk)
+Kumulativ: median­forankret P10 105 / P50 4 729 / P90 12 658 / middel 5 740
+(P50 −2,7 pst., middel +18,1 pst. mot basis). Forventningsforankret
+P10 32 / P50 4 265 / P90 11 745 / middel 5 217.
+Merk P10 = 105 mrd. — hybriden sier at i tiendeperecentilen får fondet nær
+ingenting. Det er et kraftig utsagn som må tåle å bli utfordret.
+
+### Tre veier — anbefaling
+- **(a) Ren historisk:** σ 0,393/0,490 fra `Forutsetninger!B4:B7`. Forsvarlig,
+  verifiserbart, konsistent med «Statisk modell» i P10/P90.
+- **(b) Hybrid:** nedside forankret i NZE, oppside i historikk. **Kan ikke
+  bygges nå** — gass-NZE-tallet mangler, så gass faller tilbake på historikk og
+  viften blir skjev på en måte som er vanskelig å forklare (olje σ_ned 0,78 mot
+  gass 0,49). Forsoningspunktet for gass (1,07 USD/MMBtu) viser at hybriden
+  ikke kan gjøres symmetrisk konsistent i det hele tatt.
+- **(c) Historisk motor + NZE som navngitt sidescenario** utenfor viften.
+
+**ANBEFALING: (c).** (a) og (c) er SAMME motor — (c) legger bare på en merket
+linje i figuren, altså null ekstra modellrisiko. Den skiller de to
+usikkerhetstypene som faktisk er ulike: viften viser markedsrisiko kalibrert på
+historikk, NZE-linjen viser politikkrisiko som historikken ikke inneholder. Det
+er også spørsmålet ekspertrådet vil stille. Og valget er reversibelt: kommer
+Annex A-tallene inn og støtter hybriden, slås den på med én bryter
+(`KALIBRERING="hybrid"`), som allerede er implementert.
 
 **Ikke bygget inn i arbeidsboken** — venter på brukerens valg av (a)/(b)/(c),
 per instruks.
@@ -203,9 +247,11 @@ kan hentes fra containeren — egress-proxyen blokkerer alle. Må limes inn:
 5. Vis begge horisonter (2050/3 pst. + 2060/4 pst.).
 
 ## Neste steg (prioritert)
-1. **Brukeren bekrefter forankring** (anbefalt: median, se punkt 1) og
-   **kalibreringsvei (a)/(b)/(c)** (anbefalt: (a) ren historisk, eventuelt med
-   (c) NZE som sidescenario). Ingenting bygges i arbeidsboken før det.
+1. Forankring er avklart (begge vises, punkt 1). **Gjenstår: brukerens valg av
+   kalibreringsvei (a)/(b)/(c) — anbefalt (c).** Brukeren svarte «usikker»
+   02.09.2026; beslutningsgrunnlaget står i punkt 2, inkludert
+   forsoningspunktet og hvorfor (b) ikke kan bygges nå. Ingenting bygges i
+   arbeidsboken før dette er låst.
 2. Brukeren limer inn IEA WEO Annex A-prisforutsetningene (kan ikke hentes fra
    containeren — egress blokkert) inn i `MAL` i `kalibrering.py`, så
    plasseringstallene (STEPS P61 / NZE P0,5) kan verifiseres mot faktiske tall

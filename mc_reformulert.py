@@ -62,14 +62,24 @@ N = 10_000
 SEED = 2026
 
 # ----- Forankring og kalibrering -----
+# Forankringen er avklart med brukeren 02.09.2026: BEGGE skal vises i
+# leveransen — medianforankring som hovedspor, forventningsforankring som
+# følsomhet — slik at Jensen-effekten blir eksplisitt for leseren.
 MEDIAN_ANCHOR = True     # True: median[pris]=basis (P50=NB26). False: E[pris]=basis
-KALIBRERING = "historisk"  # "historisk" (fra Forutsetninger!B4:B7) eller "manuell"
+KALIBRERING = "historisk"  # "historisk", "hybrid" eller "manuell"
 SUPPLY_FLOOR = True      # balansepris-gulv: ingen tapsproduksjon (feltnetto >= 0)
 RHO = 0.60               # korrelasjon olje/gass-regime
 
 # Brukes bare når KALIBRERING == "manuell". Sett ned == opp for symmetrisk.
 SIGMA_OLJE_NED = SIGMA_OLJE_OPP = 0.35
 SIGMA_GASS_NED = SIGMA_GASS_OPP = 0.45
+
+# Brukes bare når KALIBRERING == "hybrid": nedsiden forankres i IEA WEO NZE,
+# oppsiden i historikken (IEA har ikke noe høyprisscenario). None = mangler
+# tall; da faller varen tilbake på historisk kalibrering på begge sider.
+NZE_OLJE_USD = 25.0      # WEO 2025 NZE 2050 — søketreff, IKKE verifisert
+NZE_GASS_USD = None      # IKKE FUNNET — fyll inn fra Annex A
+P_NZE = 10               # persentilen NZE skal ligge på
 
 BBL, FX = 6.2898, 10.5   # fat/Sm3, NOK/USD (for prisimplikasjoner i USD)
 P_KANT = 90              # persentilen de historiske forholdstallene gjelder
@@ -97,13 +107,23 @@ def sigmaer(b):
     """(olje_ned, olje_opp, gass_ned, gass_opp) etter valgt kalibrering."""
     if KALIBRERING == "manuell":
         return SIGMA_OLJE_NED, SIGMA_OLJE_OPP, SIGMA_GASS_NED, SIGMA_GASS_OPP
-    if KALIBRERING != "historisk":
+    if KALIBRERING not in ("historisk", "hybrid"):
         raise ValueError(f"ukjent KALIBRERING: {KALIBRERING!r}")
     # sigma = ln(persentilforhold) / z_p for en medianforankret lognormal
     zp = _z(P_KANT / 100.0)
     p = b["par"]
-    return (-np.log(p["k_olje_lav"]) / zp, np.log(p["k_olje_hoy"]) / zp,
-            -np.log(p["k_gass_lav"]) / zp, np.log(p["k_gass_hoy"]) / zp)
+    s = [-np.log(p["k_olje_lav"]) / zp, np.log(p["k_olje_hoy"]) / zp,
+         -np.log(p["k_gass_lav"]) / zp, np.log(p["k_gass_hoy"]) / zp]
+    if KALIBRERING == "hybrid":
+        # Bytt ut NEDSIDEN med den som treffer NZE i P_NZE. Oppsiden står, siden
+        # IEA-scenariene ikke spenner høyprisverdener. Mangler et NZE-tall,
+        # beholdes den historiske nedsiden for den varen.
+        znze = _z(P_NZE / 100.0)
+        for i, (mal, basis) in enumerate(((NZE_OLJE_USD, BASIS_OLJE_USD),
+                                          (NZE_GASS_USD, BASIS_GASS_USD))):
+            if mal is not None:
+                s[2 * i] = np.log(mal / basis) / znze
+    return tuple(s)
 
 
 def _faktor(z, s_ned, s_opp, median_anchor):
@@ -134,28 +154,72 @@ def simuler(b):
     return sncf, oilfac[:, 0], gasfac[:, 0]
 
 
+DISC = np.arange(1, 26)
+
+
+def basisbane(b):
+    """Basis-SNCF per år (mrd.) — NB26/APS, uten usikkerhet."""
+    return (b["andel"] * (b["volO"] * b["pO"] + b["volN"] * b["pN"]
+            + b["volG"] * b["pG"] - b["cost"]) / 1000)
+
+
+def kjor(b, median_anchor=None, kalibrering=None):
+    """Én kjøring. Returnerer nøkkeltall som dict, uten å skrive ut."""
+    global MEDIAN_ANCHOR, KALIBRERING
+    if median_anchor is not None:
+        MEDIAN_ANCHOR = median_anchor
+    if kalibrering is not None:
+        KALIBRERING = kalibrering
+    s = sigmaer(b)
+    sncf, oilfac, gasfac = simuler(b)
+    cum = sncf.sum(axis=1)
+    npv3 = (sncf / 1.03 ** DISC).sum(axis=1)
+    q = lambda a, p: np.percentile(a, p)
+    kv = lambda a, s_: (q(a, 10) * s_, q(a, 50) * s_, q(a, 90) * s_, a.mean() * s_)
+    return dict(
+        forankring="Median" if MEDIAN_ANCHOR else "Forventning",
+        kalibrering=KALIBRERING, sigma=s,
+        olje=kv(oilfac, BASIS_OLJE_USD), gass=kv(gasfac, BASIS_GASS_USD),
+        kum=(q(cum, 10), q(cum, 50), q(cum, 90), cum.mean()),
+        npv3=(q(npv3, 10), q(npv3, 50), q(npv3, 90), npv3.mean()),
+        sum_aarsmedian=np.percentile(sncf, 50, axis=0).sum(),
+        neg=(sncf < 0).mean() * 100)
+
+
+def _rad(navn, t, d=0, bredde=34):
+    return navn + f"{t[0]:.{d}f} / {t[1]:.{d}f} / {t[2]:.{d}f} / {t[3]:.{d}f}".ljust(bredde)
+
+
 if __name__ == "__main__":
     b = les_basis()
-    s_on, s_oo, s_gn, s_go = sigmaer(b)
-    sncf, oilfac, gasfac = simuler(b)
-    disc = np.arange(1, 26)
-    cum = sncf.sum(axis=1)
-    npv3 = (sncf / 1.03 ** disc).sum(axis=1)
-    basis_cum = (b["andel"] * (b["volO"] * b["pO"] + b["volN"] * b["pN"]
-                 + b["volG"] * b["pG"] - b["cost"]) / 1000).sum()
-    p = lambda a, q: np.percentile(a, q)
-    print(f"Forankring: {'MEDIAN (P50=basis)' if MEDIAN_ANCHOR else 'FORVENTNING (E=basis)'}"
-          f" | gulv: {SUPPLY_FLOOR} | kalibrering: {KALIBRERING}")
-    print(f"Sigma olje ned/opp {s_on:.3f}/{s_oo:.3f} | "
-          f"gass ned/opp {s_gn:.3f}/{s_go:.3f}")
-    print(f"Impliert oljepris USD/fat (2035+): P10 {BASIS_OLJE_USD*p(oilfac,10):.0f} / "
-          f"P50 {BASIS_OLJE_USD*p(oilfac,50):.0f} / P90 {BASIS_OLJE_USD*p(oilfac,90):.0f} "
-          f"/ middel {BASIS_OLJE_USD*oilfac.mean():.0f}")
-    print(f"Impliert gasspris USD/MMBtu (2040+): P10 {BASIS_GASS_USD*p(gasfac,10):.1f} / "
-          f"P50 {BASIS_GASS_USD*p(gasfac,50):.1f} / P90 {BASIS_GASS_USD*p(gasfac,90):.1f} "
-          f"/ middel {BASIS_GASS_USD*gasfac.mean():.1f}")
-    print(f"Kumulativ til fondet (mrd.): P10 {p(cum,10):.0f} / P50 {p(cum,50):.0f} / "
-          f"P90 {p(cum,90):.0f} / middel {cum.mean():.0f} (basis {basis_cum:.0f})")
-    print(f"NPV 3 pst. (mrd.):           P10 {p(npv3,10):.0f} / P50 {p(npv3,50):.0f} / "
-          f"P90 {p(npv3,90):.0f} / middel {npv3.mean():.0f}")
-    print(f"Andel negative årsverdier: {(sncf<0).mean()*100:.1f}%")
+    bb = basisbane(b)
+    bc, bn = bb.sum(), (bb / 1.03 ** DISC).sum()
+    print(f"BASIS (NB26 / deck slide 5 / IEA WEO APS): kumulativ {bc:.0f} mrd. | "
+          f"NPV 3 pst. {bn:.0f} mrd.")
+    print(f"Gulv: {SUPPLY_FLOOR} | korrelasjon olje/gass: {RHO} | N = {N:_}\n")
+
+    # Begge forankringer vises, etter brukerens beslutning 02.09.2026.
+    for kal in ("historisk", "hybrid"):
+        res = [kjor(b, median_anchor=ma, kalibrering=kal) for ma in (True, False)]
+        s = res[0]["sigma"]
+        print("=" * 78)
+        print(f"KALIBRERING: {kal.upper()}   sigma olje ned/opp "
+              f"{s[0]:.3f}/{s[1]:.3f} | gass ned/opp {s[2]:.3f}/{s[3]:.3f}")
+        print("=" * 78)
+        print(f"{'':<22}{'MEDIANFORANKRING (hovedspor)':<36}"
+              f"{'FORVENTNINGSFORANKRING (følsomhet)'}")
+        print(f"{'':<22}{'P10 / P50 / P90 / middel':<36}{'P10 / P50 / P90 / middel'}")
+        print(_rad(f"{'Oljepris USD/fat':<22}", res[0]["olje"])
+              + _rad("", res[1]["olje"]))
+        print(_rad(f"{'Gasspris USD/MMBtu':<22}", res[0]["gass"], 1)
+              + _rad("", res[1]["gass"], 1))
+        print(_rad(f"{'Kumulativ mrd.':<22}", res[0]["kum"])
+              + _rad("", res[1]["kum"]))
+        print(_rad(f"{'NPV 3 pst. mrd.':<22}", res[0]["npv3"])
+              + _rad("", res[1]["npv3"]))
+        for navn, nokkel, fmt in (("P50 vs basis", "kum", lambda r: f"{100*(r['kum'][1]/bc-1):+.1f} pst."),
+                                  ("Middel vs basis", "kum", lambda r: f"{100*(r['kum'][3]/bc-1):+.1f} pst."),
+                                  ("Sum årsmedianer", "sum_aarsmedian", lambda r: f"{r['sum_aarsmedian']:.0f} mrd."),
+                                  ("Negative årsverdier", "neg", lambda r: f"{r['neg']:.1f} pst.")):
+            print(f"{navn:<22}{fmt(res[0]):<36}{fmt(res[1])}")
+        print()

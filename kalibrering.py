@@ -170,6 +170,53 @@ def plassering():
         print()
 
 
+def _middel_splitt_eksakt(s_ned, s_opp):
+    """E[splitt-lognormal] i lukket form.
+
+    Med integralet ∫_a^b e^{sz}φ(z)dz = e^{s²/2}[Φ(b−s) − Φ(a−s)] blir
+        E = e^{σ_ned²/2}·Φ(−σ_ned) + e^{σ_opp²/2}·Φ(σ_opp).
+    """
+    cdf = NormalDist().cdf
+    return (np.exp(s_ned ** 2 / 2) * cdf(-s_ned)
+            + np.exp(s_opp ** 2 / 2) * cdf(s_opp))
+
+
+def forsoningspunkt():
+    """Når faller medianforankring og forventningsforankring sammen?
+
+    Medianen i splitt-lognormalen er alltid 1. Er OGSÅ forventningen 1, gir de
+    to forankringene samme prisbane, og hele median-vs-forventning-spørsmålet
+    forsvinner for den varen. Funksjonen løser hvilken nedside-sigma som får
+    E = 1 gitt den historiske oppside-sigmaen, og regner om til prisnivået det
+    svarer til i P10 — altså hvilket NZE-tall som ville forsone de to.
+    """
+    import mc_reformulert as mc
+
+    b = mc.les_basis()
+    mc.KALIBRERING = "historisk"
+    s_on, s_oo, s_gn, s_go = mc.sigmaer(b)
+    print("=" * 78)
+    print("FORSONINGSPUNKT: hvilken nedside gir median = forventning?")
+    print("=" * 78)
+    for vare, basis, enhet, s_opp in (
+            ("olje", mc.BASIS_OLJE_USD, "USD/fat", s_oo),
+            ("gass", mc.BASIS_GASS_USD, "USD/MMBtu", s_go)):
+        lav, hoy = s_opp, 5.0
+        for _ in range(200):  # E er monotont avtakende i sigma_ned
+            mid = (lav + hoy) / 2
+            if _middel_splitt_eksakt(mid, s_opp) > 1.0:
+                lav = mid
+            else:
+                hoy = mid
+        s_ned = (lav + hoy) / 2
+        p10 = basis * np.exp(s_ned * norm_ppf(P_LAV / 100.0))
+        print(f"--- {vare.upper()} (oppside-sigma {s_opp:.3f} fra historikk) ---")
+        print(f"  Nedside-sigma som gir E = median = basis: {s_ned:.3f}")
+        print(f"  Svarer til P{P_LAV} = {p10:.2f} {enhet} (basis {basis:g})")
+    print()
+
+
 if __name__ == "__main__":
     rapport()
     plassering()
+    forsoningspunkt()
