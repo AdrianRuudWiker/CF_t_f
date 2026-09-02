@@ -11,6 +11,19 @@ Gren: `claude/sncf-anchor-calibrate-smb2ii` (bygger på PR #1-grenen
 `claude/claude-md-review-verify-70a7je`, som er merget inn).
 Se `CLAUDE (1).md` for full modelldokumentasjon.
 
+## 0. PREMISSENDRING 02.09.2026 — EXCEL-KRAVET ER OPPHEVET
+
+Brukeren har Python-tilgang på jobb likevel. Excel-native var en bærende
+premiss for arkitekturen, så flere valg må vurderes på nytt. Samtidig har
+brukeren reist et faglig spørsmål om prisprosessen: bør prisene bare sjokkes
+fra basisbanen med et godt valgt standardavvik og reversjon mot normalen?
+
+Det er i praksis et forslag om å gå tilbake mot OU-prosessen som ligger i den
+GAMLE motoren, og bort fra dagens persistente regimetrekk. Analysen under
+(punkt 5) viser at forslaget peker på en reell mangel ved dagens modell, men
+at det ikke finnes noen enkel én-faktor-løsning. **Hele prosjektet skal
+gjennomgås på nytt med alle valg — se punkt 6.**
+
 ## 1. FORANKRING — AVKLART 02.09.2026: BEGGE SKAL VISES
 
 **Brukerens beslutning: vis begge forankringer i leveransen.** Medianforankring
@@ -283,6 +296,88 @@ samme størrelse.** Den tidligere merknaden om at likheten mellom 4 800 og
 kumulativ 4 861 var tilfeldig, er nå bekreftet og tallfestet — 4 861 er
 udiskontert, og diskontert lander modellen på 3 663-3 753 uansett
 horisont/rente-kombinasjon.
+
+## 5. PRISPROSESSEN — brukerens forslag, og trilemmaet
+
+Brukerens forslag 02.09: sjokk prisene fra basisbanen med et godt valgt
+standardavvik, med reversjon mot normalen. Det er i praksis OU-prosessen i den
+gamle motoren. Forslaget treffer en REELL mangel ved dagens modell, men
+løsningen er ikke en én-faktor-prosess. Alle tall under: 20 000 sim.,
+medianforankret, basis kumulativ 4 861.
+
+### Mangelen forslaget avdekker: dagens modell har ingen termstruktur
+Den persistente regimefaktoren har samme st.avvik i logpris i 2026 som i 2050
+(0,393). Konsekvensen er at SNCF 2026 får spennet P10 164 til P90 1 168 mot en
+basis på 521 — for et år der prisene i stor grad er låst av terminmarkedet og
+produksjonen er kjent. Usikkerhet skal vokse med horisonten; her gjør den det
+ikke.
+
+### Trilemmaet: tre egenskaper, og ingen enkel prosess gir alle tre
+(a) smal vifte i 2026, (b) et avgrenset og fornuftig bånd i 2050, (c) ekte
+regimerisiko i det kumulative — altså at en lavprisverden kan vare.
+
+| prosess | halv.tid | sd 2026 | sd 2050 | SNCF 2026 P10-P90 | kum. P10 | P50 | P90 |
+|---|---|---|---|---|---|---|---|
+| Dagens, rent regime | ∞ | 0,393 | 0,393 | 164 – 1 168 | 646 | 4 990 | 12 993 |
+| OU, estimert kappa | 2,9 år | 0,232 | 0,378 | 248 – 939 | 3 210 | 5 714 | 9 172 |
+| OU + nivåvandring 0,05 | 2,9 år | 0,237 | 0,456 | 245 – 946 | 2 926 | 5 765 | 9 988 |
+| Halv kappa + nivå 0,05 | 6,2 år | 0,237 | 0,579 | 245 – 946 | 2 285 | 6 114 | 12 966 |
+| Kvart kappa + nivå 0,05 | 12,8 år | 0,237 | 0,745 | 245 – 946 | 1 752 | 6 425 | 17 219 |
+| Nesten ingen reversjon | 65 år | 0,237 | 1,059 | 245 – 946 | 1 245 | 6 834 | 27 213 |
+
+- Dagens modell gir (b) og (c), men bryter (a).
+- Ren OU gir (a) og (b), men bryter (c): kumulativ P10 går fra 646 til 3 210
+  fordi årssjokkene vasker ut hverandre.
+- Å senke kappa for å få (c) tilbake bryter (b): sd 2050 løper til 1,06 og
+  P90 til 27 213. Det er nøyaktig GBM-oppførselen som ble forkastet 01.09.
+
+### Anbefalt løsning: to faktorer som BEGGE reverterer, i ulik fart
+En rask syklisk faktor (halveringstid ~3 år, som AR(1) estimerer greit) pluss
+en LANGSOM nivåfaktor (halveringstid 20-30 år, ikke en ren random walk).
+Nivåfaktoren er i praksis «det persistente regimet», men den bygger seg opp
+over tid i stedet for å bli pålagt i år 1. Da blir 2026 smal, 2050 avgrenset,
+og nivået varer i tiår innenfor én simulering.
+
+### Ubehagelig funn om kalibreringen (berører beslutning 15)
+Det historiske båndet (sigma 0,393, fra P90/P50 = 1,65 på 1997-2024) er bare
+marginalt bredere enn et rimelig ETTÅRS standardavvik for olje (0,25-0,30).
+De 28 årsobservasjonene måler altså i hovedsak SYKELEN, ikke 25-års
+nivåskift. Å bruke 0,393 som 2050-bånd undervurderer dermed sannsynligvis
+langsiktig usikkerhet. Ved todeling bør 2050-båndet settes bevisst BREDERE enn
+det historiske — og det er en skjønnsvurdering, ikke et estimat.
+
+### Interaksjon med forankringen (berører beslutning 14)
+Under den persistente modellen ga medianforankring kumulativ P50 ≈ basis
+(+2,7 pst.) nesten tilfeldig. Med reversjon drifter kumulativ P50 til +18 pst.
+over basis, fordi hvert års forventede prisfaktor er over 1 og 25 delvis
+uavhengige år snitter mot forventningen framfor medianen. Ønskes «P50 = NB26»
+på KUMULATIVT nivå, må det bli et eksplisitt kalibreringsmål, ikke et
+biprodukt.
+
+## 6. FULL GJENNOMGANG — status for hvert valg
+
+Brukeren har bedt om at hele prosjektet gjennomgås på nytt. Statusmerking:
+**REÅPNET** = må avgjøres på nytt, **BERØRT** = kan endres av et annet valg,
+**STÅR** = ikke berørt av premissendringen.
+
+| # | Valg | Status |
+|---|---|---|
+| — | Excel-native arkitektur (2 000 faste trekk i celler, alt som formler) | **REÅPNET** — premisset falt |
+| 8 | Prisprosess (GBM forkastet → OU → persistent regime) | **REÅPNET** — se punkt 5 |
+| 13 | Persentiler som scenarier, persistente regimer | **REÅPNET** — designet står, prosessen ikke |
+| 14 | Forankring: begge vises | **BERØRT** — interaksjonen i punkt 5 |
+| 15 | Kalibrering vei (c), historisk sigma | **BERØRT** — historisk bånd måler sykel |
+| 6 | Statiske prisskift, historisk persentilkalibrering | **BERØRT** — brukes nå til å avlede sigma |
+| 12 | 3x3 som scenarioverktøy vs MC | **BERØRT** — kan bortfalle helt |
+| 2 | Statsandel kalibrert, ikke modellert | **STÅR** — men Python åpner for eksplisitt skattemodell |
+| 16 | Horisont 2060 | **STÅR** — men NB26s egen bane til 2090 kan nå brukes |
+| 1, 3, 4, 5, 7, 9, 10 | Målvariabel, kostnadsskalering, prissplitt, prisgrunnlag, enheter, resultatformer, hovedhorisont | **STÅR** |
+
+Utsatte punkter som Python nå gjør praktiske: bootstrap på sigma/kappa
+(estimeringsusikkerheten er dokumentert men ikke tallfestet i modellen),
+bias-korreksjon av kappa (kjent nedadbiasert på kort utvalg), gradvis
+nedstenging basert på balanseprisfordelingen i stedet for hardt 0-gulv, og
+flere simuleringer enn 2 000.
 
 ## Hvor vi står — to spor
 

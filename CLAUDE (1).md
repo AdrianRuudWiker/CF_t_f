@@ -9,10 +9,14 @@ formuesforvaltning. Alle beløp i faste 2026-kroner.
 
 - **All kommunikasjon og dokumentasjon på norsk bokmål.** Følg
   Finansdepartementets skrivestil der prosa produseres.
-- **Leveranser må være Excel-native.** Brukeren har ikke Python-tilgang på
-  jobb. Python kan brukes til å BYGGE og VERIFISERE, men sluttproduktet skal
-  fungere i ren Excel (formler, ikke skript). Monte Carlo-motoren er derfor
-  implementert med faste trekk + levende formler i arket.
+- **Excel-kravet er OPPHEVET 02.09.2026.** Brukeren har Python-tilgang på jobb
+  likevel, og leveransen trenger ikke være Excel alene. Dette var en BÆRENDE
+  premiss: den er grunnen til at Monte Carlo-motoren er 2 000 faste trekk
+  lagret i celler med formler oppå, i stedet for en simulering med fritt
+  antall trekk. Flere designvalg må vurderes på nytt i lys av dette — se
+  HANDOFF. Excel er fortsatt et nyttig FORMAT for presentasjon og for at andre
+  skal kunne åpne og endre forutsetninger, men ikke lenger den eneste rammen
+  modellen må passe inn i.
 - **Aldri hardkod resultater der en formel kan stå.** Endres parametre i
   Forutsetninger-arket, skal alt reberegnes.
 - **Konfidensialitet:** Kildefilen Mulighetsbilde_Petroleum.xlsx (intern
