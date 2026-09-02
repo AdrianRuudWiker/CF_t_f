@@ -13,6 +13,10 @@ forventningsforankrede medianen ligger inne som egen linje, slik at leseren ser
 hva forankringsvalget faktisk gjør. Fire linjer er maksgrensen i profilen; her
 er det tre pluss båndene.
 
+Horisonten er 2026-2060. Årene etter 2050 er ekstrapolert (se arket
+«Utvidelse 2060») og markeres med et skille i figuren, slik at leseren ser
+hvor kildegrunnlaget slutter.
+
 Figurer:
   reformulert_vifte.svg      - årlig SNCF, tetthetsvifte P5-P95, begge medianer
   reformulert_akkumulert.svg - akkumulert SNCF, persentilbånd, begge medianer
@@ -36,9 +40,11 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
 import build_reformulert as br
+import mc_reformulert as mc
 
 apply_matplotlib_style()
-YEARS = np.arange(2026, 2051)
+YEARS = np.array(br.YEARS_ALL)
+SISTE_KILDEAAR = br.YEARS[-1]      # 2050: så langt SDs mulighetsbilder rekker
 
 
 def nf(x, dec=0):
@@ -50,15 +56,15 @@ def simuler():
     """SNCF for begge forankringer på arkets egne faste trekk."""
     wb = load_workbook(br.FIL, data_only=True)
     fu = wb["Forutsetninger"]
-    col = lambda L: np.array([fu[f"{L}{18 + i}"].value for i in range(25)])
-    volO, volG, volN = col("B"), col("C"), col("D")
-    totH, totL = col("F"), col("G")
-    pO, pG, pN, cost, snks = col("J"), col("K"), col("L"), col("M"), col("N")
-    tot = volO + volG + volN
-    fh, fl = totH / tot, totL / tot
+    # Utvidelsen 2051-2060 er formler i arket, og openpyxl fjerner bufrede
+    # verdier, så halen regnes her med samme logikk (mc_reformulert.forleng).
+    b = mc.les_basis()
+    a = mc.kjed(b, mc.forleng(b))
+    volO, volG, volN = a["volO"], a["volG"], a["volN"]
+    pO, pG, pN, cost = a["pO"], a["pG"], a["pN"], a["cost"]
+    fh, fl, andel = a["fh"], a["fl"], a["andel"]
     nks = volO * pO + volG * pG + volN * pN - cost
-    andel = snks / nks
-    basis = andel * nks / 1000.0                       # NB26-basis per år (mrd.)
+    basis = andel * np.maximum(nks, 0.0) / 1000.0      # basis per år (mrd.)
 
     # Sigma avledes av persentilforholdene, som i arket.
     from statistics import NormalDist
@@ -99,6 +105,19 @@ def _fin_akser(ax):
     ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: nf(v)))
 
 
+def _ekstrapolertskille(ax):
+    """Markerer hvor kildegrunnlaget slutter og ekstrapoleringen begynner."""
+    ax.axvline(SISTE_KILDEAAR, color="#000000", lw=0.5, ls="-", zorder=3)
+    ax.axvspan(SISTE_KILDEAAR, YEARS[-1], color="#ededee", alpha=0.55,
+               linewidth=0, zorder=0)
+    # Etiketten legges nede i det skraverte feltet; oppe til høyre står
+    # tegnforklaringen i den ene figuren.
+    ax.annotate("Ekstrapolert", xy=((SISTE_KILDEAAR + YEARS[-1]) / 2, 0.035),
+                xycoords=("data", "axes fraction"), ha="center", fontsize=8,
+                color="#000000",
+                bbox=dict(facecolor="white", edgecolor="none", pad=1.5))
+
+
 def _vifte(ax, data, farge=FIN_BLUE):
     """Gradert tetthetsvifte, kuttet ved P5-P95."""
     for lo in np.arange(5, 50, 5):
@@ -126,9 +145,10 @@ def figur_vifte(ut, basis):
             lw=1.5, zorder=4, label="Median, forventningsforankret")
     _median(ax, np.median(ut["med"], axis=0), "Median, medianforankret (P50)")
     ax.axhline(0, color="#000000", lw=0.5, zorder=2)
-    ax.set_xlim(2026, 2050)
+    _ekstrapolertskille(ax)
+    ax.set_xlim(YEARS[0], YEARS[-1])
     ax.margins(x=0)
-    ax.set_xticks([2030, 2035, 2040, 2045, 2050])
+    ax.set_xticks([2030, 2035, 2040, 2045, 2050, 2055, 2060])
     _fin_akser(ax)
     ax.annotate("Mrd. 2026-kroner", xy=(0, 1.02), xycoords="axes fraction",
                 fontsize=9, color="#000000")
@@ -147,9 +167,10 @@ def figur_akkumulert(ut, basis):
     ax.plot(YEARS, np.median(kum["for"], axis=0), color=FIN_LIGHTBLUE, ls=":",
             lw=1.5, zorder=4, label="Median, forventningsforankret")
     _median(ax, np.median(kum["med"], axis=0), "Median, medianforankret (P50)")
-    ax.set_xlim(2026, 2050)
+    _ekstrapolertskille(ax)
+    ax.set_xlim(YEARS[0], YEARS[-1])
     ax.margins(x=0)
-    ax.set_xticks([2030, 2035, 2040, 2045, 2050])
+    ax.set_xticks([2030, 2035, 2040, 2045, 2050, 2055, 2060])
     _fin_akser(ax)
     ax.annotate("Mrd. 2026-kroner, akkumulert", xy=(0, 1.02),
                 xycoords="axes fraction", fontsize=9, color="#000000")

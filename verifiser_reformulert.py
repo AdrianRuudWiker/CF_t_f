@@ -67,6 +67,7 @@ def _testbok(n, sti):
     wb.create_sheet("Dokumentasjon")
     w, z1, z2 = br.trekk(n, br.SEED)
     br._parametre(wb)
+    br._utvidelse(wb, n)
     br._motor(wb, w, z1, z2, n)
     br._vifte(wb, n)
     br._dokumentasjon(wb)
@@ -75,24 +76,28 @@ def _testbok(n, sti):
 
 
 def _referanse(n, w, z1, z2):
-    """Python-referanse på identiske trekk, begge forankringer."""
+    """Python-referanse på identiske trekk, begge forankringer, 2026-2060."""
     b = mc.les_basis()
     mc.KALIBRERING = "historisk"
     s_on, s_oo, s_gn, s_go = mc.sigmaer(b)
     sig_o, sig_g = s_oo, s_go            # symmetrisk historisk kalibrering
     rho = 0.60
+    a = mc.kjed(b, mc.forleng(b))
+    volO, volG, volN = a["volO"], a["volG"], a["volN"]
+    pO, pG, pN, cost = a["pO"], a["pG"], a["pN"], a["cost"]
+    fh, fl, andel = a["fh"], a["fl"], a["andel"]
+
     fo = np.exp(sig_o * z1)[:, None]
     fg = np.exp(sig_g * (rho * z1 + np.sqrt(1 - rho ** 2) * z2))[:, None]
-    volfac = np.where(w[:, None] >= 0, 1 + w[:, None] * (b["fh"] - 1),
-                      1 + w[:, None] * (1 - b["fl"]))
-    volfac = volfac / (1 + (b["fh"] + b["fl"] - 2) / 6)
+    volfac = np.where(w[:, None] >= 0, 1 + w[:, None] * (fh - 1),
+                      1 + w[:, None] * (1 - fl))
+    volfac = volfac / (1 + (fh + fl - 2) / 6)
     ut = {}
     for navn, ko, kg in (("med", 1.0, 1.0),
                          ("for", np.exp(-sig_o ** 2 / 2), np.exp(-sig_g ** 2 / 2))):
-        netto = volfac * (b["volO"] * b["pO"] * fo * ko
-                          + b["volN"] * b["pN"] * fo * ko
-                          + b["volG"] * b["pG"] * fg * kg - b["cost"])
-        ut[navn] = b["andel"] * np.maximum(netto, 0.0) / 1000.0
+        netto = volfac * (volO * pO * fo * ko + volN * pN * fo * ko
+                          + volG * pG * fg * kg - cost)
+        ut[navn] = andel * np.maximum(netto, 0.0) / 1000.0
     return ut, (sig_o, sig_g), (fo[:, 0], fg[:, 0])
 
 
@@ -130,7 +135,7 @@ def main():
     for navn, base in (("med", br.C_MED), ("for", br.C_FOR)):
         d = 0.0
         for r in range(N_TEST):
-            for i in range(br.NY):
+            for i in range(br.NYA):
                 x = hent(br.MOTOR, f"{CL(base + i)}{br.DATA0 + r}")
                 d = max(d, abs(x - ref[navn][r, i]))
         verst[navn] = d
@@ -147,16 +152,73 @@ def main():
             y = np.percentile(ref[navn][:, 0], q)
             if abs(x - y) > 1e-6:
                 feil.append(f"vifte {navn} P{q} 2026: {x:.4f} vs {y:.4f}")
-        kum = ref[navn].sum(axis=1)
+        kum = ref[navn][:, :br.NY].sum(axis=1)
         x = hent(br.VIFTE, f"{CL(kol0 + 2)}34")              # kumulativ P50
         y = np.percentile(kum, 50)
         print(f"  Vifte {navn}: kumulativ P50 Excel {x:.2f} / Python {y:.2f}")
         if abs(x - y) > 1e-6:
             feil.append(f"kumulativ P50 {navn}: {x:.4f} vs {y:.4f}")
         x = hent(br.VIFTE, f"{CL(kol0 + 2)}35")              # NPV3 P50
-        y = np.percentile((ref[navn] / 1.03 ** disc).sum(axis=1), 50)
+        y = np.percentile((ref[navn][:, :br.NY] / 1.03 ** disc).sum(axis=1), 50)
         if abs(x - y) > 1e-6:
             feil.append(f"NPV3 P50 {navn}: {x:.4f} vs {y:.4f}")
+
+    # --- 2b. Utvidelsen til 2060 og broen -----------------------------------
+    d60 = np.arange(1, br.NYA + 1)
+    for navn, base in (("med", br.A_MED), ("for", br.A_FOR)):
+        a = ref[navn]
+        for nokkel, y in (("KUM60", a.sum(axis=1)),
+                          ("NPV4_60", (a / 1.04 ** d60).sum(axis=1)),
+                          ("NPV3_60", (a / 1.03 ** d60).sum(axis=1))):
+            col = CL(base + br.AGG.index(nokkel))
+            x = hent(br.MOTOR, f"{col}{br.DATA0}")           # første simulering
+            if abs(x - y[0]) > 1e-6:
+                feil.append(f"{nokkel} {navn} sim 1: {x:.4f} vs {y[0]:.4f}")
+        # og persentilen slik den vises i utvidelsesarket
+        rad = 33 if navn == "med" else 34
+        col = CL(base + br.AGG.index("NPV4_60"))
+        rng_p = np.percentile((a / 1.04 ** d60).sum(axis=1), 50)
+        x = hent(br.UTV, f"D{rad}")
+        print(f"  Utvidelse {navn}: NNV 4 pst. 2026-2060 P50 Excel {x:.2f} "
+              f"/ Python {rng_p:.2f}")
+        if abs(x - rng_p) > 1e-6:
+            feil.append(f"NNV4 2060 P50 {navn}: {x:.4f} vs {rng_p:.4f}")
+
+    # Basisbanen og broen: rad 4 i broen skal være lik basiskolonnen i rad 31.
+    bas = np.array([hent(br.UTV, f"S{br.E_BAS0 + i}") for i in range(br.NYA)])
+    npv4_bas = (bas / 1.04 ** d60).sum()
+    for celle, y, navn in (("H33", npv4_bas, "basis NNV 4 pst. 2026-2060"),
+                           ("B44", npv4_bas, "bro rad 4"),
+                           ("B41", (bas[:br.NY] / 1.03 ** np.arange(1, br.NY + 1)).sum(),
+                            "bro rad 1 (NNV 3 pst. 2026-2050)")):
+        x = hent(br.UTV, celle)
+        print(f"  {navn}: Excel {x:.1f} / Python {y:.1f}")
+        if abs(x - y) > 1e-6:
+            feil.append(f"{navn}: {x:.4f} vs {y:.4f}")
+    x = hent(br.UTV, "B50")
+    print(f"  Broens interne kontroll (skal være 0): {x:.2e}")
+    if abs(x) > 1e-6:
+        feil.append(f"broens kontroll ikke 0: {x:.4e}")
+
+    # Ekstrapoleringen: monoton fallende og positiv gjennom hele halen
+    for i in range(br.NYE):
+        rad = br.EXT0 + i
+        for kol, lbl in (("B", "råolje"), ("C", "gass"), ("M", "kostnader")):
+            v = hent(br.UTV, f"{kol}{rad}")
+            if v <= 0:
+                feil.append(f"ekstrapolert {lbl} ikke positiv i {2051+i}: {v}")
+    print(f"  Ekstrapolert 2060: råolje {hent(br.UTV, f'B{br.EXT0+9}'):.1f} / "
+          f"gass {hent(br.UTV, f'C{br.EXT0+9}'):.1f} mill. Sm3 o.e., "
+          f"basis SNCF {hent(br.UTV, f'N{br.EXT0+9}')/1000:.0f} mrd.")
+    # Ratene og statsandelen i arket mot Python-referansen
+    e = mc.forleng(mc.les_basis())
+    for kol, navn, py in (("B", "råolje", e["volO"]), ("C", "gass", e["volG"]),
+                          ("M", "kostnader", e["cost"]),
+                          ("P", "statsandel", e["andel"])):
+        x = hent(br.UTV, f"{kol}{br.EXT0}")
+        if abs(x - py[0]) > 1e-9 * max(1.0, abs(py[0])):
+            feil.append(f"ekstrapolert {navn} 2051: {x:.6f} vs {py[0]:.6f}")
+    print("  Ekstrapoleringen i arket matcher mc_reformulert.forleng")
 
     # --- 3. Forankringsidentitetene ----------------------------------------
     s_o = hent("Forutsetninger", f"B{br.R_SIGO}")

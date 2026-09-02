@@ -1,7 +1,9 @@
 # HANDOFF — SNCF-modell, status og videre arbeid
 
 Overlevering til ny chat-økt. Prosjektet: modell for statens netto kontantstrøm
-(SNCF) fra petroleum → innbetaling til SPU, 2026-2050, faste 2026-kroner.
+(SNCF) fra petroleum → innbetaling til SPU, faste 2026-kroner. Hovedhorisont
+2026-2050 (kildebelagt), med ekstrapolert utvidelse til 2060 for
+sammenligning mot PM-referansen.
 Bygget for saksbehandler i FIN, Avdeling for formuesforvaltning. Alt på norsk
 bokmål. Leveranse skal fungere Excel-native (bruker har ikke Python på jobb).
 
@@ -197,6 +199,66 @@ så `EXP(-B47^2/2)` ble `EXP(+B47^2/2)` — må skrives `EXP(-(B47^2)/2)`;
 (ii) testboken må skrive de avledede kolonnene E/H/I/O/P som formler, siden
 openpyxl fjerner bufrede verdier og `data_only` derfor gir None.
 
+## 4. UTVIDELSE TIL 2060 OG SAMMENLIGNINGEN MOT 4 800 — 02.09.2026
+
+Bygget som eget synlig ark «Utvidelse 2060». Hovedmodellen beholder 2026-2050,
+som er kildebelagt; 2051-2060 er ekstrapolert og merket som det, også i
+figurene (grått felt fra 2050).
+
+Ekstrapoleringen: volumer, totalbaner og kostnader føres videre med de
+geometriske ratene over de siste fem årene av basisbanen (olje −3,35 pst.,
+gass −3,70 pst., kostnader −2,93 pst. per år), prisene holdes flate — de er
+flate fra 2041 i basisbanen uansett — og statsandelen holdes på 0,983, snittet
+av 2046-2050. Vindu og et påslag i prosentpoeng er input, så halen kan
+stresstestes fra arket.
+
+**Broen (basisbanen, mrd. 2026-kroner, neddiskontert til 2025):**
+
+| | mrd. |
+|---|---|
+| 1. Basis NNV 3 pst., 2026-2050 | 3 753 |
+| 2. Effekt av rente 3 → 4 pst. | −276 |
+| 3. Effekt av horisont 2051-2060, ved 4 pst. | +186 |
+| 4. = Modellens basis NNV 2026-2060, 4 pst. | **3 663** |
+| 5. PM-referanse | 4 800 |
+| 6. Differanse | **−1 137** (−23,7 pst.) |
+
+**Hovedfunnet: horisont og rente opphever nesten hverandre.** Overgangen fra 3
+til 4 pst. koster mer enn de ti ekstra årene tilfører, så nettoeffekten er bare
+−90 mrd. Differansen mot 4 800 ligger dermed i kontantstrømmens NIVÅ og var
+der allerede på 2026-2050 med 3 pst. (3 753 mot 4 800). Utvidelsen løser altså
+ikke gapet — den viser at gapet ikke handler om horisont eller rente.
+
+Robusthet: et påslag på alle nedgangsrater fra 0 til +5 prosentpoeng flytter
+NNV 4 pst. bare fra 3 663 til 3 716 mrd. (+3,4 pp gir tilnærmet flat
+oljeproduksjon; merk at et FELLES påslag ikke kan nulle ut rater som er ulike,
+så ved +3,4 pp begynner kostnadene å vokse svakt). Halen er liten og ligger
+langt ute i diskonteringen, så konklusjonen henger ikke på
+ekstrapoleringsvalget.
+
+Halekontroll mot NB26: NB26s egen formuesberegning (statens del, 2026-2090,
+3 pst.) er 4 721 mrd., som impliserer en hale etter 2050 verdt om lag 968 mrd.
+Modellens ekstrapolerte hale 2051-2090 er 415 mrd., og selv FLAT produksjon på
+2050-nivået helt til 2090 gir bare 881 mrd. — altså under NB26s implisitte
+tall. Ekstrapoleringen er om noe konservativ, og forklarer ikke differansen.
+
+Gjenstående kandidater for de ~1 100 mrd., i prioritert rekkefølge:
+1. Årgang: 4 800 er fra Perspektivmeldingen, ikke NB26. Prisbaner og
+   produksjonsanslag kan være en annen årgang. Repoet har ingen PM-data, så
+   dette kan ikke sjekkes herfra.
+2. Prisbasis: er PM-tallet i 2025-kroner og ikke 2026-kroner, skal det ganges
+   opp med ett års utgiftsdeflator. Det ØKER PM-tallet til 4 944 og utvider
+   differansen. Cellen B14 på arket gjør justeringen; den står på 1 fordi
+   prisbasisen ikke er verifisert.
+3. Omfang: hva PM regner med i kontantstrømmen som ikke ligger i
+   NB26-grunnlaget slik det er rekonstruert her.
+
+**Konsekvens for leveransen: 4 800 og modellens tall skal IKKE presenteres som
+samme størrelse.** Den tidligere merknaden om at likheten mellom 4 800 og
+kumulativ 4 861 var tilfeldig, er nå bekreftet og tallfestet — 4 861 er
+udiskontert, og diskontert lander modellen på 3 663-3 753 uansett
+horisont/rente-kombinasjon.
+
 ## Hvor vi står — to spor
 
 ### Spor 1: Committet leveranse (i repoet, PR #1)
@@ -292,7 +354,6 @@ kan hentes fra containeren — egress-proxyen blokkerer alle. Må limes inn:
    variasjon i tillegg (i dag er pris ren persistent faktor).
 4. Foredle tilbudsrespons: fra hardt 0-gulv til en balansepris-basert gradvis
    nedstenging (bruk fordelingen ~20-45 USD fra slide 14).
-5. 2060/4 pst.-utvidelse (ekstrapoler produksjon/pris 2051-2060).
 6. Integrere i leveransen: Excel-native motor (via `build_workbook.py`),
    `mc_simulering.py`, regenerere figurer (`lag_figurer.py`), oppdatere CLAUDE.md.
 7. Rydde: filnavn `CLAUDE (1).md` → `CLAUDE.md`.

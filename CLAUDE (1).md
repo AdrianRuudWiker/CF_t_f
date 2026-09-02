@@ -47,12 +47,20 @@ formuesforvaltning. Alle beløp i faste 2026-kroner.
     begge forankringer side om side (B-G medianforankret, H-M forventnings-
     forankret), NB26-basis og IEA NZE-sidescenario i N/O, oppsummering rad
     31-37, kontroll mot basis rad 39-45, parameteravlesning rad 47-58.
-  - **MC-motor-R** (skjult): 2 000 simuleringer av den reformulerte modellen.
-    Kolonner: w, z1, z2 (persistente trekk, ett per simulering, frø 2026),
-    fo/fg (prisfaktorer, beregnet én gang per simulering), SNCF per år for
-    begge forankringer, og KUM/NPV3/NPV2/NPV4 per forankring. Per-år-parametre
-    i rad 3-8 over medianblokken; forventningsblokken peker på de samme
-    cellene.
+  - **MC-motor-R** (skjult): 2 000 simuleringer av den reformulerte modellen,
+    2026-2060 (35 år). Kolonner: w, z1, z2 (persistente trekk, ett per
+    simulering, frø 2026), fo/fg (prisfaktorer, beregnet én gang per
+    simulering), SNCF per år for begge forankringer, og sju aggregater per
+    forankring: KUM50, NPV3_50, NPV2_50, NPV4_50, KUM60, NPV4_60, NPV3_60.
+    Per-år-parametre i rad 3-8 over medianblokken; forventningsblokken peker
+    på de samme cellene. Årene til og med 2050 hentes fra Forutsetninger,
+    2051-2060 fra «Utvidelse 2060», som har samme kolonneoppsett.
+  - **Utvidelse 2060**: ekstrapolert årstabell 2051-2060 (speiler
+    Forutsetninger kolonne for kolonne), fordeling av NNV og kumulativ
+    2026-2060 for begge forankringer, og BROEN fra hovedmodellens 3 753 til
+    PM-referansen på 4 800. Parameterblokk rad 4-16, årstabell rad 18-28,
+    samlet basisbane i R/S rad 5-39, fordeling rad 31-38, bro rad 40-47,
+    kontroller rad 49-52.
   - **Dokumentasjon**: antakelser, begrensninger, kilder.
 - `mc_simulering.py` — valgfri Python-referanse; leser parametre fra
   arbeidsboken. 10 000 simuleringer. Brukes til verifikasjon.
@@ -65,7 +73,9 @@ formuesforvaltning. Alle beløp i faste 2026-kroner.
   «Reformulert vifte» + skjult «MC-motor-R» + parameterblokken) inn i
   arbeidsboken. Ikke-destruktivt: de eksisterende arkene står urørt.
 - `verifiser_reformulert.py` — verifiserer Excel-formlene mot Python med
-  `formulas`-biblioteket, på en liten, strukturelt identisk testbok.
+  `formulas`-biblioteket, på en liten, strukturelt identisk testbok. Dekker
+  motoren celle for celle over alle 35 år, persentil- og aggregatformlene,
+  utvidelsen, broen og forankringsidentitetene.
 - `mc_reformulert.py` — Python-referanse for den reformulerte modellen.
   Rapporterer begge forankringer side om side. Brytere: `MEDIAN_ANCHOR`,
   `KALIBRERING` ("historisk"/"hybrid"/"manuell"), `SUPPLY_FLOOR`.
@@ -112,6 +122,11 @@ SNCF_t = andel_t * MAX(volfaktor_t/E[volfaktor_t]
   netto-uttrykket.
 - **IEA WEO NZE** ligger som navngitt sidescenario i kolonne O, med basisvolum
   og NZE-priser. Gir #N/A til prisene er lagt inn (B60/B61 eller Q/R).
+- **Horisont**: 2026-2050 er kildebelagt (SDs mulighetsbilder). 2051-2060 er
+  ekstrapolert på arket «Utvidelse 2060»: volumer, totalbaner og kostnader
+  føres videre med de geometriske ratene over de siste fem årene (vindu og
+  påslag er input), prisene holdes flate (de er flate fra 2041 i basisbanen
+  uansett), og statsandelen holdes på snittet av samme vindu.
 
 ### Gammel modell (mellomstasjon) — «Statisk modell», «Monte Carlo», «MC-motor»
 
@@ -187,6 +202,14 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
     politikk og etterspørsel, ikke tilbudssjokk, og spenner nesten bare
     nedsiden — STEPS impliserer sigma 0,064, NZE 0,803, altså 12,5x forskjell,
     og en symmetrisk sigma som treffer NZE gir P90 = 196 USD/fat.
+16. HORISONT 2060 (02.09.2026): utvidelsen 2051-2060 er bygget for å kunne
+    sammenligne med PM-referansen på 4 800 mrd. (NNV 2026-2060, 4 pst.).
+    Hovedmodellen beholder 2026-2050, som er kildebelagt; utvidelsen ligger på
+    eget ark og er merket ekstrapolert også i figurene. Konklusjonen er at
+    modellen ligger om lag 1 100 mrd. UNDER PM-tallet på like vilkår, og at
+    horisont og rente ikke forklarer det. De to tallene skal derfor ikke
+    presenteres som samme størrelse. Punkt 5 i beslutningsloggen om «vis begge
+    horisonter» er dermed oppfylt, men med det forbeholdet.
 12. 3x3 er et SCENARIOverktøy, MC et SANNSYNLIGHETSverktøy — de svarer på
     ulike spørsmål og skal ikke ha samme høy/lav. De statiske prisskiftene ble
     re-sentrert på NB26 01.09.2026 (avklart med brukeren): de rå historiske
@@ -215,8 +238,12 @@ SNCF_t = andel_t * volfaktor_t * (volO_t*pO_t*Mo_t + volG_t*pG_t*Mg_t
 - Reformulert modell, P50 mot basis: kumulativ P50 4 990 mot basis 4 861
   (+2,7 pst.) i medianforankringen; sum av årsmedianer 4 943. Avviket er
   simuleringsstøy pluss at medianen av en sum ikke er summen av medianer.
-- recalc uten formelfeil (279 000 formler; 158 000 i den gamle MC-motoren,
-  120 000 i MC-motor-R).
+- Utvidelsen: ekstrapoleringen i arket matcher `mc_reformulert.forleng` (egen
+  Python-implementasjon av samme logikk) på maskinpresisjon; broen summerer
+  eksakt til basiskolonnen (kontrollcellen er 0), og NNV/kumulativ for
+  2026-2060 matcher Python for begge forankringer.
+- recalc uten formelfeil (332 000 formler; 158 000 i den gamle MC-motoren,
+  168 000 i MC-motor-R).
 
 ## Kjente feller i tallgrunnlaget (funnet og løst — ikke gjeninnfør dem)
 
@@ -283,6 +310,39 @@ Basis: kumulativ 4 861, NPV 3 pst. 3 753 mrd.
   gass P10 3,0 / P50 5,7 / P90 10,8 USD/MMBtu.
 - IEA-scenariene i denne viften: STEPS (76 USD) faller på P61, NZE (25 USD) på
   P0,5. Begge tall er UVERIFISERTE søketreff — Annex A kunne ikke hentes.
+
+### Utvidelse til 2060 og PM-referansen (basisbanen, mrd. 2026-kroner)
+
+Broen, alt neddiskontert til 2025 (Excels NPV diskonterer første beløp ett år,
+som PM-tallets «NNV i 2025»):
+
+| | mrd. |
+|---|---|
+| 1. Basis NNV 3 pst., 2026-2050 | 3 753 |
+| 2. Effekt av rente 3 → 4 pst., samme horisont | −276 |
+| 3. Effekt av horisont 2051-2060, ved 4 pst. | +186 |
+| 4. = Modellens basis NNV 2026-2060, 4 pst. | **3 663** |
+| 5. PM-referanse (deck slide 5) | 4 800 |
+| 6. Differanse, modell minus PM | **−1 137** (−23,7 pst.) |
+
+Horisont og rente opphever nesten hverandre, så differansen ligger i
+kontantstrømmens NIVÅ, ikke i regnemåten — den var der allerede på 2026-2050
+med 3 pst. Robusthet: et påslag på alle nedgangsrater fra 0 til +5 prosentpoeng
+(der +3,4 pp gir tilnærmet flat oljeproduksjon) flytter tallet bare fra 3 663
+til 3 716. Konklusjonen henger ikke på ekstrapoleringsvalget.
+
+Halekontroll: NB26s egen formuesberegning (statens del, 2026-2090, 3 pst.)
+er 4 721 mrd., som impliserer at halen etter 2050 er verdt om lag 968 mrd.
+Modellens ekstrapolerte hale 2051-2090 er 415 mrd., og selv FLAT produksjon
+på 2050-nivået til 2090 gir bare 881 mrd. Ekstrapoleringen er altså om noe
+konservativ og forklarer ikke differansen mot PM-tallet. Gjenstående
+kandidater: årgang (PM mot NB26), prisbasis (er PM i 2025-kroner, øker
+PM-tallet til 4 944 og differansen vokser), og hva PM regner med som ikke
+ligger i NB26-grunnlaget.
+
+Fordeling 2026-2060, NNV 4 pst. (2 000 faste trekk): medianforankret
+P10 552 / P50 3 759 / P90 9 688, middel 4 566; forventningsforankret
+P10 255 / P50 2 975 / P90 8 349, middel 3 762.
 - NB26s egen formuesberegning (statens del, 2026-2090, 3 pst.): 4 721 mrd.
   Differansen mot vår NPV (3 753) er halen 2051-2090 (968 mrd. i nåverdi).
 

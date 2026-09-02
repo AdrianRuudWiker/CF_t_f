@@ -103,6 +103,45 @@ def les_basis():
                 pO=pO, pG=pG, pN=pN, cost=cost, andel=andel, par=par)
 
 
+NYE = 10                 # ekstrapolerte år 2051-2060
+VINDU = 5                # vindu for nedgangsraten, som i arket
+
+
+def forleng(b, nye=NYE, vindu=VINDU, rjust=0.0):
+    """Forlenger basisgrunnlaget forbi 2050, slik arket «Utvidelse 2060» gjør.
+
+    Dette er en SELVSTENDIG implementasjon av arkets logikk, ikke en lesing av
+    arkets resultater — det er nettopp poenget når den brukes til å verifisere
+    Excel-formlene. Volumer, totalbaner og kostnader føres videre med den
+    geometriske raten over de siste `vindu` årene (pluss et påslag `rjust` i
+    prosentpoeng); prisene holdes flate; statsandelen settes til snittet over
+    samme vindu.
+
+    Returnerer et dict med samme nøkler som les_basis, men bare halen.
+    """
+    v = vindu
+    rate = lambda a: (a[-1] / a[-1 - v]) ** (1 / v) - 1 + rjust
+    steg = np.arange(1, nye + 1)
+    ut = {k: b[k][-1] * (1 + rate(b[k])) ** steg
+          for k in ("volO", "volG", "volN", "cost")}
+    # fh/fl er forholdstall; rekonstruer totalbanene, forleng dem, del på nytt
+    tot = b["volO"] + b["volG"] + b["volN"]
+    totH_e = (b["fh"] * tot)[-1] * (1 + rate(b["fh"] * tot)) ** steg
+    totL_e = (b["fl"] * tot)[-1] * (1 + rate(b["fl"] * tot)) ** steg
+    tot_e = ut["volO"] + ut["volG"] + ut["volN"]
+    ut["fh"], ut["fl"] = totH_e / tot_e, totL_e / tot_e
+    for k in ("pO", "pG", "pN"):
+        ut[k] = np.repeat(b[k][-1], nye)
+    ut["andel"] = np.repeat(b["andel"][-v:].mean(), nye)
+    return ut
+
+
+def kjed(b, e):
+    """Kjeder basisgrunnlaget 2026-2050 med halen fra `forleng`."""
+    return {k: (np.concatenate([b[k], e[k]]) if k in e else b[k])
+            for k in b if k != "par"}
+
+
 def sigmaer(b):
     """(olje_ned, olje_opp, gass_ned, gass_opp) etter valgt kalibrering."""
     if KALIBRERING == "manuell":
