@@ -126,10 +126,27 @@ def sigmaer(b):
     return tuple(s)
 
 
+def _middel_splitt(s_ned, s_opp):
+    """E[splitt-lognormal] i lukket form.
+
+    Med ∫_a^b e^{sz}φ(z)dz = e^{s²/2}[Φ(b−s) − Φ(a−s)] blir
+        E = e^{σ_ned²/2}·Φ(−σ_ned) + e^{σ_opp²/2}·Φ(σ_opp).
+    Symmetrisk (σ_ned = σ_opp = σ) reduseres dette til e^{σ²/2}, som er den
+    Jensen-korreksjonen Excel-motoren bruker.
+    """
+    cdf = NormalDist().cdf
+    return (np.exp(s_ned ** 2 / 2) * cdf(-s_ned)
+            + np.exp(s_opp ** 2 / 2) * cdf(s_opp))
+
+
 def _faktor(z, s_ned, s_opp, median_anchor):
-    """Splitt-lognormal faktor. Uten medianforankring trekkes middelet til 1."""
+    """Splitt-lognormal faktor. Uten medianforankring trekkes middelet til 1.
+
+    Middelet deles på den EKSAKTE forventningen, ikke på utvalgsgjennomsnittet,
+    slik at Python og Excel-motoren gir identiske tall på samme trekk.
+    """
     f = np.exp(np.where(z < 0, s_ned, s_opp) * z)
-    return f if median_anchor else f / f.mean()
+    return f if median_anchor else f / _middel_splitt(s_ned, s_opp)
 
 
 def simuler(b):

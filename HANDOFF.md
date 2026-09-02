@@ -72,8 +72,9 @@ Fra søketreff (WEO 2025, **IKKE verifisert mot Annex A**): olje STEPS 80 USD/fa
 i 2035 og 76 i 2050; NZE 33 i 2035 og 25 i 2050. Gassprisene ble ikke funnet i
 det hele tatt. Presentasjonen i repoet er gjennomsøkt (alle 15 slides) — den
 oppgir bare APS som langsiktig anker, ingen STEPS/NZE-tall.
-**Brukeren har IEA-tilgang på jobb og bør lime inn Annex A-tabellen;**
-fyll den inn i `MAL` i `kalibrering.py`.
+**Brukeren har IEA-tilgang på jobb og bør lime inn Annex A-tabellen.** To
+steder: `MAL` i `kalibrering.py`, og de blå cellene B60-B63 i Forutsetninger
+(eller kolonne Q/R for en årsbane).
 
 ### Det strukturelle funnet: IEA-scenariene kan ikke kalibrere en vifte
 Planen «P90 ~ STEPS, P10 ~ NZE» virker ikke. IEA-scenariene skiller seg ved
@@ -135,7 +136,7 @@ E = e^(σ_ned²/2)·Φ(−σ_ned) + e^(σ_opp²/2)·Φ(σ_opp).
   middel/median-gap på gass står uansett igjen og må opplyses.
 
 ### Kjørte tall for hybrid (nedside olje = NZE 25, gass historisk)
-Kumulativ: median­forankret P10 105 / P50 4 729 / P90 12 658 / middel 5 740
+Kumulativ: medianforankret P10 105 / P50 4 729 / P90 12 658 / middel 5 740
 (P50 −2,7 pst., middel +18,1 pst. mot basis). Forventningsforankret
 P10 32 / P50 4 265 / P90 11 745 / middel 5 217.
 Merk P10 = 105 mrd. — hybriden sier at i tiendeperecentilen får fondet nær
@@ -159,8 +160,42 @@ er også spørsmålet ekspertrådet vil stille. Og valget er reversibelt: kommer
 Annex A-tallene inn og støtter hybriden, slås den på med én bryter
 (`KALIBRERING="hybrid"`), som allerede er implementert.
 
-**Ikke bygget inn i arbeidsboken** — venter på brukerens valg av (a)/(b)/(c),
-per instruks.
+**VALGT 02.09.2026: vei (c).** Bygget inn i arbeidsboken.
+
+## 3. BYGGET — status 02.09.2026
+
+Begge valg er låst og bygget inn i `Kontantstromsmodell_petroleum.xlsx` av
+`build_reformulert.py`. Ikke-destruktivt: de gamle arkene står urørt.
+
+Nytt i boka:
+- **«Reformulert vifte»** (synlig, plassert før Dokumentasjon): persentiler for
+  BEGGE forankringer side om side (B-G median, H-M forventning), NB26-basis og
+  NZE-sidescenario i N/O, oppsummering (kumulativ + NPV 2/3/4) rad 31-37,
+  kontroll mot basis rad 39-45, parameteravlesning rad 47-58, og to
+  gråtonenoter som forklarer hvorfor IEA ikke kalibrerer viften.
+- **«MC-motor-R»** (skjult): 2 000 simuleringer, 120 000 formler. Persistente
+  trekk (w, z1, z2 — ett per simulering), prisfaktorene fo/fg beregnet én gang
+  per simulering, og SNCF per år for begge forankringer på SAMME trekk.
+- **Forutsetninger rad 46-68**: parameterblokk. sigma avledet av B4:B7,
+  korrelasjon, gulvbryter, Jensen-korreksjoner, enhetskonvertering, IEA-input
+  (blå, tomme) og persentilavlesning for NZE/STEPS.
+- **Forutsetninger kolonne Q/R**: input for NZE-prisbaner per år.
+- **Dokumentasjon**: sju nye avsnitt om den reformulerte modellen.
+- Figurer: `reformulert_vifte.svg` og `reformulert_akkumulert.svg`, begge med
+  medianforankrede bånd og den forventningsforankrede medianen som egen linje.
+
+Forventede tall når boka åpnes (2 000 faste trekk, frø 2026):
+kumulativ medianforankret P10 646 / P50 4 990 / P90 12 993 / middel 6 075;
+forventningsforankret P10 283 / P50 3 935 / P90 11 202 / middel 4 997.
+0,0 pst. negative årsverdier.
+
+Verifikasjon: `python3 verifiser_reformulert.py` bygger en liten, strukturelt
+identisk testbok med de SAMME funksjonene og evaluerer den med
+`formulas`-biblioteket (soffice er ødelagt). Største avvik mot Python 1,8e-12.
+Testen fanget to reelle feil: (i) Excel binder unær minus sterkere enn potens,
+så `EXP(-B47^2/2)` ble `EXP(+B47^2/2)` — må skrives `EXP(-(B47^2)/2)`;
+(ii) testboken må skrive de avledede kolonnene E/H/I/O/P som formler, siden
+openpyxl fjerner bufrede verdier og `data_only` derfor gir None.
 
 ## Hvor vi står — to spor
 
@@ -177,8 +212,10 @@ VIKTIG: brukeren ble frustrert over multiplikator-3x3-en og de negative tallene.
 Vi forlot den tilnærmingen til fordel for Spor 2. Committet bok er altså en
 mellomstasjon, ikke ønsket sluttdesign.
 
-### Spor 2: Reformulert modell (ØNSKET RETNING) — `mc_reformulert.py`
-Prototype, ikke integrert i boka ennå. Kjør `python3 mc_reformulert.py`.
+### Spor 2: Reformulert modell (ØNSKET RETNING) — nå i boka
+INTEGRERT 02.09.2026, se punkt 3. Python-referansen er `mc_reformulert.py`
+(kjør `python3 mc_reformulert.py`); Excel-versjonen bygges av
+`build_reformulert.py`.
 
 Idé: én Monte Carlo på basisproduksjon der **PERSENTILENE SELV ER SCENARIENE**:
 P90 = høy prognosert CF, P50 = median, P10 = lav. Ingen egen 3x3.
@@ -189,8 +226,8 @@ P90 = høy prognosert CF, P50 = median, P10 = lav. Ingen egen 3x3.
 - Basis = IEA WEO APS. IEA-forankring av ytterkantene (P90 ~ STEPS, P10 ~ NZE)
   er PRØVD OG FORKASTET — se punkt 2 over. Sigma kalibreres historisk.
 
-Nåværende oppsett (`MEDIAN_ANCHOR=True`, `KALIBRERING="historisk"`,
-sigma olje/gass 0,393/0,490 lest ut av `Forutsetninger!B4:B7`):
+Python-referansens oppsett (`MEDIAN_ANCHOR=True`, `KALIBRERING="historisk"`,
+sigma olje/gass 0,393/0,490 lest ut av `Forutsetninger!B4:B7`, 10 000 sim.):
 - Impliert oljepris: P10 41 / P50 68 / P90 112 USD/fat (middel 73).
 - Impliert gasspris: P10 3,0 / P50 5,7 / P90 10,8 USD/MMBtu (middel 6,4).
 - Kumulativ til fondet: P10 688 / P50 5 006 / P90 12 679 / middel 6 087.
@@ -199,8 +236,7 @@ sigma olje/gass 0,393/0,490 lest ut av `Forutsetninger!B4:B7`):
 
 Nytt i `mc_reformulert.py`: splitt-lognormal (eget sigma over/under medianen,
 median bevart eksakt), `KALIBRERING`-bryter, sigma avledet fra arbeidsboken.
-Viftefigur `reformulert_vifte.svg` er fra det GAMLE oppsettet og må regenereres
-når forankring og kalibrering er låst.
+Figurene er regenerert mot det låste oppsettet med `lag_figur_reformulert.py`.
 
 ## KILDER (autoritative)
 
@@ -247,15 +283,11 @@ kan hentes fra containeren — egress-proxyen blokkerer alle. Må limes inn:
 5. Vis begge horisonter (2050/3 pst. + 2060/4 pst.).
 
 ## Neste steg (prioritert)
-1. Forankring er avklart (begge vises, punkt 1). **Gjenstår: brukerens valg av
-   kalibreringsvei (a)/(b)/(c) — anbefalt (c).** Brukeren svarte «usikker»
-   02.09.2026; beslutningsgrunnlaget står i punkt 2, inkludert
-   forsoningspunktet og hvorfor (b) ikke kan bygges nå. Ingenting bygges i
-   arbeidsboken før dette er låst.
-2. Brukeren limer inn IEA WEO Annex A-prisforutsetningene (kan ikke hentes fra
-   containeren — egress blokkert) inn i `MAL` i `kalibrering.py`, så
-   plasseringstallene (STEPS P61 / NZE P0,5) kan verifiseres mot faktiske tall
-   i stedet for søketreff.
+1. Brukeren limer inn IEA WEO Annex A-prisforutsetningene (kan ikke hentes fra
+   containeren — egress blokkert). To steder: `MAL` i `kalibrering.py`, og de
+   blå cellene B60-B63 i Forutsetninger. Da tennes NZE-sidescenarioet i
+   kolonne O (gir #N/A til da), og persentilavlesningen (STEPS P61 / NZE P0,5)
+   kan verifiseres mot faktiske tall i stedet for søketreff.
 3. Vurdere om persistent regime-trekk er nok, eller om det trengs år-til-år-
    variasjon i tillegg (i dag er pris ren persistent faktor).
 4. Foredle tilbudsrespons: fra hardt 0-gulv til en balansepris-basert gradvis
