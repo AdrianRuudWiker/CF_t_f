@@ -5,36 +5,118 @@ Overlevering til ny chat-økt. Prosjektet: modell for statens netto kontantstrø
 Bygget for saksbehandler i FIN, Avdeling for formuesforvaltning. Alt på norsk
 bokmål. Leveranse skal fungere Excel-native (bruker har ikke Python på jobb).
 
-Gren: `claude/claude-md-review-verify-70a7je`. PR #1 mot main.
+Gren: `claude/sncf-anchor-calibrate-smb2ii` (bygger på PR #1-grenen
+`claude/claude-md-review-verify-70a7je`, som er merget inn).
 Se `CLAUDE (1).md` for full modelldokumentasjon.
 
-## DET SENTRALE ÅPNE SPØRSMÅLET (start her)
+## 1. FORANKRING — avklart faglig, venter på brukerens bekreftelse
 
-Brukeren mener **P50 (median) bør = NB26-basis** — "50-persentil = NB26". I
-dagens forventningsforankring blir medianen LAVERE enn basis, og brukeren er
-ikke fornøyd med det.
+Brukeren mener **P50 (median) bør = NB26-basis**. Begge forankringer er kjørt.
+`MEDIAN_ANCHOR` i `mc_reformulert.py` er satt til `True` (medianforankring) som
+anbefalt utgangspunkt.
 
-Hvorfor median < basis i dag: prisen modelleres som en lognormal faktor med
-E[faktor]=1 (forventningsforankret). For lognormal er median = exp(-0,5σ²) <
-mean = 1. Så median pris < basis → median CF < basis.
+Hvorfor de to skiller seg: prisen er en lognormal faktor. For lognormal er
+median = exp(-0,5σ²) < mean = 1. Forventningsforankring (E[faktor]=1) presser
+derfor medianen under basis; medianforankring (median[faktor]=1) løfter middelet
+over basis. **Man kan ikke få begge.** Kontantstrømmens middel/median-gap er
+ca. 18-25 pst. uansett valg — driftsleverasje (inntekt minus kostnad) forsterker
+prisgapet på 6-11 pst. Forankringen bestemmer bare hvilken av de to NB26 blir
+liggende på.
 
-To valg (bryter `MEDIAN_ANCHOR` i `mc_reformulert.py`):
-| | Forventningsforankring (dagens) | Medianforankring |
+Med historisk kalibrert sigma (se punkt 2), kumulativ 2026-2050, mrd. 2026-kr,
+basis 4 861:
+
+| | Forventningsforankring | Medianforankring |
 |---|---|---|
-| Kumulativ P50 | 4 116 | **4 973 (≈ basis 4 861)** |
-| Kumulativ middel | 4 964 | 5 848 |
-| NPV3 P50 | 3 210 | 3 853 |
+| Kumulativ P50 | 3 975 (−18,2 pst.) | **5 006 (+3,0 pst.)** |
+| Kumulativ middel | 5 011 (+3,1 pst.) | 6 087 (+25,2 pst.) |
+| Sum av årsmedianer | 3 946 | 4 971 (≈ basis) |
+| NPV 3 pst. P50 | 3 105 (−17,3 pst.) | 3 874 (+3,2 pst.) |
+| Impliert oljepris P50 | 63 USD/fat | 68 USD/fat (= basis) |
 
-- **Forventningsforankring:** E[pris]=NB26 → median under basis. Riktig HVIS
-  NB26 er en forventningsbane.
-- **Medianforankring:** median[pris]=NB26 → P50≈basis (det brukeren vil ha),
-  men middelet havner OVER basis.
+**Anbefaling: medianforankring.** Tre grunner:
+1. Basis er IEA WEO APS (deck slide 5) — et *scenario*, ikke et
+   sannsynlighetsvektet gjennomsnitt. IEA presiserer selv at scenariene ikke er
+   prognoser. Et scenario merket «sentralt» leses naturlig som «like sannsynlig
+   over som under», altså en median.
+2. Designet krever det. Hele poenget er at persentilene ER scenariene. Er
+   P50 ≠ NB26, presenterer modellen tre scenarier der ingen av dem er det
+   offisielt vedtatte sentralanslaget. Det er ikke holdbart i et FIN-notat.
+3. Offisiell praksis. Norges Banks rente- og inflasjonsvifter og IMF WEOs
+   vifter legger sentralbanen på medianen.
 
-Hvilken som er riktig avhenger av om NB26 tolkes som forventning eller median.
-Tidligere i prosjektet sa brukeren "forventning/sentralbane", men intuisjonen
-nå peker mot medianforankring. **Må avklares først i ny økt.** Merk: for en
-vifte der "P50 = sentralanslaget = NB26" er medianforankring mest intuitivt for
-en leser, og er slik offisielle vifter (f.eks. inflasjonsrapporter) ofte er.
+Motargumentet, som må stå i Dokumentasjon-arket: terminprisene fram til 2035
+(deck slide 5) er nærmest en *forventning* om prisen, og med medianforankring
+havner modellens forventede innbetaling til fondet ~25 pst. over NB26s eget
+anslag. **Middelet skal derfor ikke rapporteres som «forventet innbetaling»
+uten at avviket mot NB26 er opplyst.** Praktisk: rapporter persentiler, ikke
+middel.
+
+## 2. KALIBRERING AV SIGMA — IEA-planen holder ikke, historisk gjør det
+
+`kalibrering.py` gjør begge veier: løser sigma fra måltall, og leser av hvilken
+persentil et gitt måltall havner på i den historiske kalibreringen.
+
+### Nettadgang: IEA-tallene kunne ikke hentes
+Containerens egress-proxy blokkerer `iea.org`, `iea.blob.core.windows.net`,
+`regjeringen.no`, `carbonbrief.org` og alt annet direkte oppslag — bare
+websøk kommer ut. Annex A-prisforutsetningene i WEO er derfor **ikke** hentet.
+Fra søketreff (WEO 2025, **IKKE verifisert mot Annex A**): olje STEPS 80 USD/fat
+i 2035 og 76 i 2050; NZE 33 i 2035 og 25 i 2050. Gassprisene ble ikke funnet i
+det hele tatt. Presentasjonen i repoet er gjennomsøkt (alle 15 slides) — den
+oppgir bare APS som langsiktig anker, ingen STEPS/NZE-tall.
+**Brukeren har IEA-tilgang på jobb og bør lime inn Annex A-tabellen;**
+fyll den inn i `MAL` i `kalibrering.py`.
+
+### Det strukturelle funnet: IEA-scenariene kan ikke kalibrere en vifte
+Planen «P90 ~ STEPS, P10 ~ NZE» virker ikke. IEA-scenariene skiller seg ved
+*politikk og etterspørsel*, ikke ved tilbudssjokk, så de spenner nesten bare
+nedsiden av prisfordelingen. IEA har ingen høyprisverden. Med basis 70:
+- STEPS 76 ⇒ sigma_opp = 0,064. NZE 25 ⇒ sigma_ned = 0,803. **12,5x forskjell.**
+- Symmetrisk sigma = 0,803 (treffer NZE) gir P90 = 196 USD/fat.
+- Symmetrisk sigma = 0,064 (treffer STEPS) gir P10 = 64 USD/fat.
+- Splitt-lognormal treffer begge, men viften blir meningsløs: P25 41, P75 73,
+  og impliert forventning 57 USD/fat — 18 pst. UNDER deckets egen basis.
+
+Kjørt i modellen kollapser den varianten også P50 (til 4 117, −15,3 pst.), fordi
+CF-medianen ikke er prismedianen når flere risikofaktorer virker sammen.
+
+### Anbefalt kalibrering: historisk, lest ut av arbeidsboken
+`KALIBRERING="historisk"` leser `Forutsetninger!B4:B7` — de re-sentrerte
+historiske persentilforholdene (P90/P50 og P10/P50 av realpris 1997-2024) — og
+regner sigma = ln(forhold)/z_p eksakt. Ingenting hardkodes (CLAUDE.md-regelen).
+Resultat: **sigma_olje 0,393, sigma_gass 0,490** — og forholdstallene er
+eksakt symmetriske i log, så splitt-lognormalen kollapser til én sigma per vare.
+Nær dagens ad hoc 0,35/0,45, men nå avledet i stedet for gjettet.
+
+Gevinsten: den reformulerte viften reproduserer da de statiske prisskiftene i
+«Statisk modell» nøyaktig i P10/P90. De to modellene blir konsistente, og
+sigma oppdaterer seg selv hvis persentilforholdene endres.
+
+Implisert: olje P10 41 / P50 68 / P90 112 USD/fat; gass P10 3,0 / P50 5,7 /
+P90 10,8 USD/MMBtu. Kumulativ P10 688 / P50 5 006 / P90 12 679, middel 6 087.
+Balansepris-gulvet virker: 0,0 pst. negative årsverdier (mot 11,2 pst. uten).
+
+### Uenigheten mellom kildene, målt
+Holder man historisk sigma fast, faller IEA-scenariene på:
+- STEPS (76 USD) → **P61** — praktisk sett umulig å skille fra basis.
+- NZE (25 USD) → **P0,5** — en 1-av-200-hendelse.
+
+Altså: den historiske kalibreringen behandler en NZE-verden som nærmest
+utelukket. Det er en **politisk-faglig vurdering brukeren må ta stilling til**,
+ikke noe modellen kan avgjøre. Historikken 1997-2024 er en verden uten
+gjennomført energiomstilling; kalibrerer man på den, antar man implisitt at
+omstillingsrisikoen ligner fortidens prisrisiko. Tre veier:
+- **(a) Ren historisk** (anbefalt som hovedspor): forsvarlig, verifiserbart,
+  konsistent med den statiske modellen. Opplys i Dokumentasjon at NZE er P0,5.
+- **(b) Hybrid**: nedsiden forankret i NZE (omstillingsrisiko), oppsiden i
+  historikk/terminvolatilitet siden IEA mangler høyprisscenario. Krever
+  splitt-lognormal — som er implementert. Gir en tydelig skjev vifte.
+- **(c) NZE som eksplisitt sidescenario** utenfor viften, ikke som persentil.
+  Kommuniserer best: viften viser markedsrisiko, NZE viser politikkrisiko.
+
+**Ikke bygget inn i arbeidsboken** — venter på brukerens valg av (a)/(b)/(c),
+per instruks.
 
 ## Hvor vi står — to spor
 
@@ -60,15 +142,21 @@ P90 = høy prognosert CF, P50 = median, P10 = lav. Ingen egen 3x3.
   (triangulær lav/basis/høy) — speiler "høybane/lavbane har vart over flere år".
 - Tilbudsrespons: feltnetto gulves ved 0 (ingen tapsproduksjon), forankret i
   balanseprisene. Fjerner de meningsløse negative tallene (0 % negative år).
-- Forankret i IEA WEO: P90 ~ STEPS/Current Policies, P10 ~ NZE, basis = APS.
+- Basis = IEA WEO APS. IEA-forankring av ytterkantene (P90 ~ STEPS, P10 ~ NZE)
+  er PRØVD OG FORKASTET — se punkt 2 over. Sigma kalibreres historisk.
 
-Resultat (forventningsforankret, sigma olje/gass 0,35/0,45):
-- Impliert oljepris: P10 41 / P50 64 / P90 100 USD/fat.
-- Impliert gasspris: P10 2,9 / P50 5,2 / P90 9,3 USD/MMBtu.
-- Kumulativ til fondet: P10 537 / P50 4 116 / P90 10 326 / middel 4 964.
-- NPV3: P10 478 / P50 3 210 / P90 7 825.
-Viftefigur laget (scratchpad `reformulert_vifte.svg`) — kopi committet som
-referanse.
+Nåværende oppsett (`MEDIAN_ANCHOR=True`, `KALIBRERING="historisk"`,
+sigma olje/gass 0,393/0,490 lest ut av `Forutsetninger!B4:B7`):
+- Impliert oljepris: P10 41 / P50 68 / P90 112 USD/fat (middel 73).
+- Impliert gasspris: P10 3,0 / P50 5,7 / P90 10,8 USD/MMBtu (middel 6,4).
+- Kumulativ til fondet: P10 688 / P50 5 006 / P90 12 679 / middel 6 087.
+- NPV3: P10 601 / P50 3 874 / P90 9 581 / middel 4 658.
+- 0,0 pst. negative årsverdier.
+
+Nytt i `mc_reformulert.py`: splitt-lognormal (eget sigma over/under medianen,
+median bevart eksakt), `KALIBRERING`-bryter, sigma avledet fra arbeidsboken.
+Viftefigur `reformulert_vifte.svg` er fra det GAMLE oppsettet og må regenereres
+når forankring og kalibrering er låst.
 
 ## KILDER (autoritative)
 
@@ -95,7 +183,8 @@ Likheten er tilfeldig. Brukeren vil "vise begge": 2050/3 pst. som hovedmodell +
 2060/4 pst. som sammenligning mot 4 800 (krever ekstrapolering 2051-2060 utover
 SD-dataene).
 
-Brukerens URL-kilder (til IEA-kalibrering og produksjon):
+Brukerens URL-kilder (til IEA-kalibrering og produksjon). MERK: ingen av disse
+kan hentes fra containeren — egress-proxyen blokkerer alle. Må limes inn:
 - IEA WEO 2024: iea.org/reports/world-energy-outlook-2024
 - IEA WEO 2025 Current Policies: iea.org/reports/world-energy-outlook-2025/current-policies-scenario
 - Perspektivmeldingen/oljemelding: regjeringen.no .../stm202520260001000dddopri.pdf
@@ -109,14 +198,18 @@ Brukerens URL-kilder (til IEA-kalibrering og produksjon):
 3. Negative CF-tall er en modellfeil (manglende tilbudsrespons), ikke en egenskap
    — skal fjernes med balansepris-gulv.
 4. Gass behandles med egen prisdynamikk (størst inntekt, frikoblet fra olje
-   siden ~2010). IEA-anker: høy=STEPS, lav=NZE.
+   siden ~2010). IEA-ankeret høy=STEPS/lav=NZE er senere FORKASTET (punkt 2):
+   scenariene spenner bare nedsiden og kan ikke kalibrere ytterkantene.
 5. Vis begge horisonter (2050/3 pst. + 2060/4 pst.).
 
 ## Neste steg (prioritert)
-1. **Avklar forankring** (median vs forventning — se øverst). Sannsynligvis
-   medianforankring gitt brukerens intuisjon; sett `MEDIAN_ANCHOR=True`.
-2. Hente EKSAKTE IEA WEO STEPS/NZE olje- og gasspriser fra lenkene; kalibrere
-   SIGMA_OLJE/SIGMA_GASS så P90/P10 treffer STEPS/NZE presist.
+1. **Brukeren bekrefter forankring** (anbefalt: median, se punkt 1) og
+   **kalibreringsvei (a)/(b)/(c)** (anbefalt: (a) ren historisk, eventuelt med
+   (c) NZE som sidescenario). Ingenting bygges i arbeidsboken før det.
+2. Brukeren limer inn IEA WEO Annex A-prisforutsetningene (kan ikke hentes fra
+   containeren — egress blokkert) inn i `MAL` i `kalibrering.py`, så
+   plasseringstallene (STEPS P61 / NZE P0,5) kan verifiseres mot faktiske tall
+   i stedet for søketreff.
 3. Vurdere om persistent regime-trekk er nok, eller om det trengs år-til-år-
    variasjon i tillegg (i dag er pris ren persistent faktor).
 4. Foredle tilbudsrespons: fra hardt 0-gulv til en balansepris-basert gradvis
