@@ -11,8 +11,11 @@ Modellvalg (jf. Dokumentasjon-arket):
 - Volum: ett trekk per simulering; triangulær vekt w ~ Tri(-1, 0, 1)
   interpolerer mellom lav- (w=-1), basis- (w=0) og høybanen (w=+1).
 - Pris: gjennomsnittsreverterende prosess (Ornstein-Uhlenbeck på
-  logpris) medianforankret i NB26-banen. Kappa estimert med AR(1) på
-  realpriser 1997-2024. OVERSTYR_KAPPA = 0.0 gir ren GBM.
+  logpris) FORVENTNINGSFORANKRET i NB26-banen (E[pris]=NB26 via
+  Jensen-korreksjon), fordi NB26-banen er en forventningsbane, ikke en
+  median. Kappa estimert med AR(1) på realpriser 1997-2024.
+  OVERSTYR_KAPPA = 0.0 gir ren GBM.
+- Volum: forventningsforankret, E[volfaktor]=1.
 - NGL følger oljesjokket. Pris-volum-korrelasjon er null.
 
 Kjøring:  python mc_simulering.py
@@ -66,17 +69,27 @@ w = rng.triangular(-1, 0, 1, size=N)
 volfac = np.where(w[:, None] >= 0,
                   1 + w[:, None] * (fh - 1),
                   1 - (-w[:, None]) * (1 - fl))
+# Forventningsforankring, volum: del på E[volfaktor] = 1 + (fh + fl - 2)/6
+# (lukket form for den symmetriske triangulære vekten), slik at E[volfac]=1.
+volfac = volfac / (1 + (fh + fl - 2) / 6.0)
 
 L = np.linalg.cholesky([[1, rho], [rho, 1]])
 eps = rng.standard_normal((N, T, 2)) @ L.T
 
 logMo = np.zeros((N, T)); logMg = np.zeros((N, T))
+varO = np.zeros(T); varG = np.zeros(T); vo = vg = 0.0
 for t in range(T):
     prev_o = logMo[:, t - 1] if t else 0.0
     prev_g = logMg[:, t - 1] if t else 0.0
     logMo[:, t] = prev_o * phiO + sO * eps[:, t, 0]
     logMg[:, t] = prev_g * phiG + sG * eps[:, t, 1]
-Mo, Mg = np.exp(logMo), np.exp(logMg)
+    vo = phiO ** 2 * vo + sO ** 2      # Var(logMo_t) = phi^2*Var_{t-1} + sigma^2
+    vg = phiG ** 2 * vg + sG ** 2
+    varO[t] = vo; varG[t] = vg
+# Forventningsforankring, pris (Jensen): E[pris]=NB26 => E[Mo]=E[Mg]=1.
+# Korreksjonen ligger KUN på eksponentieringen, ikke i OU-rekursjonen over
+# (ellers reverterer prosessen mot et senket nivå og feilen komponerer).
+Mo, Mg = np.exp(logMo - 0.5 * varO), np.exp(logMg - 0.5 * varG)
 
 rev = volfac * (volO * pO * Mo + volG * pG * Mg + volN * pN * Mo)
 sncf = andel * (rev - volfac * cost) / 1000.0   # mrd. 2026-kroner
