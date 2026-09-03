@@ -1,22 +1,29 @@
-serie,kilde,argang,filnavn,ark,celleomrade,uttrekksdato,offentlig,merknad
-produksjon_olje,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 30,,nei,
-produksjon_gass,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 31,,nei,
-produksjon_ngl,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 32,,nei,
-prisbane_olje,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 38,,nei,
-prisbane_gass,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 39,,nei,
-prisbane_ngl,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 40,,nei,
-driftsutgifter,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 55,,nei,paalopte
-investeringsutgifter,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 58,,nei,paalopte
-deflator,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 44,,nei,basisaar 2026
-snks,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 84,,nei,
-marginalskattesats,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Skiftberegning,rad 7,,nei,
-sdoe_andeler,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Skiftberegning,rad 37-39,,nei,per ressurs
-gassprisgjennomslag,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Skiftberegning,rad 17,,nei,AAPENT PUNKT 2
-produksjon_sd_basis,Ressursrapport 2026,RR26,,,,,ja,MANGLER
-produksjon_sd_hoy,Ressursrapport 2026,RR26,,,,,ja,MANGLER - endret profil vs RR24
-produksjon_sd_lav,Ressursrapport 2026,RR26,,,,,ja,MANGLER
-realpris_wti,FRED WTISPLC,,,,,,ja,hentes av src/fred.py
-realpris_brent,FRED DCOILBRENTEU,,,,,,ja,hentes av src/fred.py
-kpi_us,FRED CPIAUCSL,,,,,,ja,hentes av src/fred.py
-implisitt_vol_olje,FRED OVXCLS,,,,,,ja,hentes av src/fred.py
-implisitt_vol_gass,Macrobond,,,,,,nei,MANGLER - se README
+serie,kilde,argang,filnavn,ark,celleomrade,uttrekksdato,offentlig,merknad,enhet,prisbasis,dekning,enhet_kilde
+deflator,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 44,2026-09-03,nei,basisaar 2026,"indeks, 2026 = 1",—,2007-2090,"indeks, 2026 = 1"
+dollarkurs,Nasjonalbudsjettet 2026,NB26,,KVARTS,rad 11,2026-09-03,nei,KVARTS rad 11,NOK/USD,løpende,1997-2090,NOK/USD
+driftsutgifter,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 55,2026-09-03,nei,paalopte,mrd. kr,løpende,2007-2090,mill. kr
+fat_per_sm3,Nasjonalbudsjettet 2026,NB26,,KVARTS,rad 16,2026-09-03,nei,KVARTS rad 16,fat/Sm3 o.e.,—,1997-2090,fat/Sm3 o.e.
+fondsverdi,"Nasjonalbudsjettet 2026, hovedtabeller",NB26,,,,,ja,MANGLER — ikke i data/raw. Kun steg 3.,,,,
+gassprisgjennomslag,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Skiftberegning,rad 17,2026-09-03,nei,"AAPENT PUNKT 3: 0,50 hele perioden. Parameter med standardverdi 1,0 og bryter til 0,50, jf. README.",andel,—,2001-2090,andel
+implisitt_vol_gass,Macrobond,,,,,,nei,MANGLER - se README,,,,
+implisitt_vol_olje,FRED OVXCLS,,,,,,ja,hentes av src/fred.py,,,,
+investeringsutgifter,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 58,2026-09-03,nei,paalopte,mrd. kr,løpende,2007-2090,mill. kr
+kpi_us,FRED CPIAUCSL,,,,,,ja,hentes av src/fred.py,,,,
+marginalskattesats,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Skiftberegning,rad 7,2026-09-03,nei,"0,76 i 2001, 0,78 fra 2002. Hentet uavkortet; testen dekker 2026-2090.",andel,—,2001-2090,andel
+oljekorrigert_underskudd,"Nasjonalbudsjettet 2026, hovedtabeller",NB26,,,,,ja,MANGLER — ikke i data/raw. Kun steg 3.,,,,
+prisbane_gass,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 39,2026-09-03,nei,,kr/Sm3 o.e.,løpende,2007-2090,kr/Sm3 o.e.
+prisbane_ngl,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 40,2026-09-03,nei,,kr/Sm3 o.e.,løpende,2007-2090,kr/Sm3 o.e.
+prisbane_olje,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 38,2026-09-03,nei,,kr/Sm3 o.e.,løpende,2007-2090,kr/Sm3 o.e.
+produksjon_gass,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 31,2026-09-03,nei,,mill. Sm3 o.e.,volum,2007-2090,mill. Sm3 o.e.
+produksjon_ngl,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 32,2026-09-03,nei,,mill. Sm3 o.e.,volum,2007-2090,mill. Sm3 o.e.
+produksjon_olje,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 30,2026-09-03,nei,,mill. Sm3 o.e.,volum,2007-2090,mill. Sm3 o.e.
+produksjon_sd_basis,Ressursrapport 2026,RR26,ressursrapport-...-numbers.xlsx,Fig. 1.10,"kolonne 4, fra rad 20",2026-09-03,ja,hentet,mill. Sm3 o.e.,—,2025-2050,mill. Sm3 o.e.
+produksjon_sd_historisk,Ressursrapport 2026,RR26,ressursrapport-...-numbers.xlsx,Fig. 1.10,"kolonne 3, fra rad 20",2026-09-03,ja,"figur 1.10, kolonne C",mill. Sm3 o.e.,—,1971-2025,mill. Sm3 o.e.
+produksjon_sd_hoy,Ressursrapport 2026,RR26,ressursrapport-...-numbers.xlsx,Fig. 1.10,"kolonne 5, fra rad 20",2026-09-03,ja,endret profil vs RR24,mill. Sm3 o.e.,—,2025-2050,mill. Sm3 o.e.
+produksjon_sd_lav,Ressursrapport 2026,RR26,ressursrapport-...-numbers.xlsx,Fig. 1.10,"kolonne 6, fra rad 20",2026-09-03,ja,hentet,mill. Sm3 o.e.,—,2025-2050,mill. Sm3 o.e.
+realpris_brent,FRED DCOILBRENTEU,,,,,,ja,hentes av src/fred.py,,,,
+realpris_wti,FRED WTISPLC,,,,,,ja,hentes av src/fred.py,,,,
+sdoe_andel_gass,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Skiftberegning,rad 38,2026-09-03,nei,"SDØEs produksjonsandel, gass",andel,—,2001-2090,andel
+sdoe_andel_ngl,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Skiftberegning,rad 39,2026-09-03,nei,"UBRUKELIG ETTER 2045: forholdstall med kollapsende nevner (NGL-produksjonen faller til 0,05 mill. Sm3 o.e. i 2060), passerer 1 i 2055-2058. Erstattes av oljens andel i modell.py.",andel,—,2001-2090,andel
+sdoe_andel_olje,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Skiftberegning,rad 37,2026-09-03,nei,"SDØEs produksjonsandel, olje",andel,—,2001-2090,andel
+snks,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 84,2026-09-03,nei,"NB26 rad 84, faste 2026-kroner. 2026 = 521,3 mrd. Se valg 1 i src/uttrekk.py om hvorfor RNB 2026s 685,6 ikke er brukt.",mrd. kr,faste 2026,2007-2090,mill. kr
