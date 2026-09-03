@@ -22,8 +22,8 @@ ENHETER
     på 1 000. `MILL_PER_MRD` gjør den omregningen ett sted.
 
 STATUS
-    marginalrate() er implementert (steg 1). kontantstrom() hører til steg 2
-    og står fortsatt igjen.
+    marginalrate() implementert i steg 1, kontantstrom() og volumbaner() i
+    steg 2. Prisusikkerhet ligger i src/prisprosess.py og hører til steg 3.
 """
 
 from __future__ import annotations
@@ -98,8 +98,91 @@ def marginalrate(inndata: pd.DataFrame, sdoe_ngl_som_olje: bool = True) -> pd.Se
     return sum(vekt[r] / vekt["sum"] * m_r[r] for r in RESSURSER).rename("m")
 
 
-def kontantstrom(inndata: pd.DataFrame, priser: pd.DataFrame, volum: pd.DataFrame) -> pd.Series:
-    raise NotImplementedError  # steg 2
+def volumbaner(inndata: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    """NB26s basisvolum skalert til Sokkeldirektoratets tre mulighetsbilder.
+
+        f[t] = SD_scenario[t] / SD_basis[t]
+
+    Nevneren er Sokkeldirektoratets EGEN basis, aldri NB26s. Den forrige
+    modellen brukte NB26s, og fikk en lavbane som lå over basisbanen i
+    2026-2029. Ressursmiksen antas lik i alle tre banene; Sokkeldirektoratet
+    publiserer ikke splitten, og har den ikke.
+    """
+    nb = pd.DataFrame({r: inndata[f"produksjon_{r}"] for r in RESSURSER})
+    ut = {}
+    for b in ("basis", "hoy", "lav"):
+        f = inndata[f"produksjon_sd_{b}"] / inndata["produksjon_sd_basis"]
+        ut[b] = nb.mul(f, axis=0)
+    return ut
+
+
+def kontantstrom(inndata: pd.DataFrame, priser: pd.DataFrame | None = None,
+                 volum: pd.DataFrame | None = None,
+                 kostnad: pd.Series | None = None,
+                 gassprisgjennomslag: float = 1.0) -> pd.Series:
+    """Statens netto kontantstrøm, mrd. 2026-kroner per år.
+
+        SNCF[t] = maks( SNKS_basis[t] + m[t] * (Δinntekt[t] − Δkostnad[t]), 0 )
+
+    Avvik fra basis, ikke nivåer. Da holder basisidentiteten mot NB26 eksakt
+    per konstruksjon: kalles funksjonen uten argumenter, faller alle Δ ut og
+    resultatet ER NB26s egen SNKS-bane. Ingen kalibrert restandel, ingen
+    tilnærming.
+
+    priser  kr/Sm3 o.e., faste 2026-kroner, kolonner olje/gass/ngl.
+            Standard: Energidepartementets baner, jf. realpriser().
+    volum   mill. Sm3 o.e., samme kolonner. Standard: NB26s basisbane.
+    kostnad mrd. 2026-kroner. Standard: NB26s kostnad skalert med endringen i
+            samlet volum, altså uendret enhetskostnad. Det er en antakelse:
+            faste driftskostnader skalerer ikke, så nedsiden er trolig noe
+            for gunstig. Oppgis kostnaden eksplisitt, brukes den som den er.
+
+    gassprisgjennomslag  hvor stor del av en gassprisENDRING som når realisert
+            inntekt. NB26s egen Skiftberegning oppgir 0,50 for hele perioden.
+            Standardverdien her er 1,0, altså fullt gjennomslag, fordi tallet
+            ikke er avklart med Energidepartementet — jf. åpent punkt 3 i
+            README. Bryteren finnes for å kunne vise begge.
+
+    Gulvet maks(., 0) er en tilbudsrespons: staten mottar ikke negativ
+    kontantstrøm i det lange løp, fordi felt stenges ned. Merk at
+    maks(sum felt, 0) ikke er sum maks(felt, 0) — aggregatgulvet
+    undervurderer tilbudsresponsen. Bindingsraten fås av gulvet_binder().
+    """
+    p_nb, v_nb = realpriser(inndata), pd.DataFrame(
+        {r: inndata[f"produksjon_{r}"] for r in RESSURSER})
+    p = p_nb if priser is None else priser
+    v = v_nb if volum is None else volum
+
+    if gassprisgjennomslag != 1.0:
+        p = p.copy()
+        p["gass"] = p_nb["gass"] + gassprisgjennomslag * (p["gass"] - p_nb["gass"])
+
+    d_innt = sum(v[r] * p[r] - v_nb[r] * p_nb[r] for r in RESSURSER) / MILL_PER_MRD
+
+    k_nb = realkostnader(inndata)["sum"]
+    if kostnad is None:
+        skala = v[list(RESSURSER)].sum(axis=1) / v_nb[list(RESSURSER)].sum(axis=1)
+        kostnad = k_nb * skala
+    d_kost = kostnad - k_nb
+
+    raa = inndata["snks"] + marginalrate(inndata) * (d_innt - d_kost)
+    return raa.clip(lower=0).rename("sncf")
+
+
+def gulvet_binder(inndata: pd.DataFrame, **kw) -> pd.Series:
+    """Hvilke år gulvet maks(., 0) faktisk binder. Skal rapporteres."""
+    p_nb, v_nb = realpriser(inndata), pd.DataFrame(
+        {r: inndata[f"produksjon_{r}"] for r in RESSURSER})
+    p = kw.get("priser") or p_nb
+    v = kw.get("volum") if kw.get("volum") is not None else v_nb
+    d_innt = sum(v[r] * p[r] - v_nb[r] * p_nb[r] for r in RESSURSER) / MILL_PER_MRD
+    k_nb = realkostnader(inndata)["sum"]
+    kostnad = kw.get("kostnad")
+    if kostnad is None:
+        skala = v[list(RESSURSER)].sum(axis=1) / v_nb[list(RESSURSER)].sum(axis=1)
+        kostnad = k_nb * skala
+    raa = inndata["snks"] + marginalrate(inndata) * (d_innt - (kostnad - k_nb))
+    return raa < 0
 
 
 def nnv(strom: pd.Series, rente: float, datert: int = 2025) -> float:
