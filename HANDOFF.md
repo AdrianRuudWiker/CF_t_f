@@ -5,11 +5,22 @@ Overlevering til ny chat-økt. Prosjektet: modell for statens netto kontantstrø
 2026-2050 (kildebelagt), med ekstrapolert utvidelse til 2060 for
 sammenligning mot PM-referansen.
 Bygget for saksbehandler i FIN, Avdeling for formuesforvaltning. Alt på norsk
-bokmål. Leveranse skal fungere Excel-native (bruker har ikke Python på jobb).
+bokmål.
 
 Gren: `claude/sncf-anchor-calibrate-smb2ii` (bygger på PR #1-grenen
 `claude/claude-md-review-verify-70a7je`, som er merget inn).
-Se `CLAUDE (1).md` for full modelldokumentasjon.
+
+**LES I DENNE REKKEFØLGEN:**
+1. Dette dokumentet, punkt 0 — premisset som falt bort.
+2. `GJENNOMGANG.md` — full etterprøving av ALLE valg mot kildedataene,
+   utført 02.09.2026. Det er det viktigste dokumentet nå: åtte problemer er
+   funnet og fire valg er bekreftet, alt med tall.
+3. `CLAUDE (1).md` — modelldokumentasjon, arkitektur og beslutningslogg.
+4. Punkt 1-6 under, som er beslutningsgrunnlaget fra økten 02.09.
+
+**Status: modellen er bygget og verifisert, men står foran en omarbeiding.**
+Brukeren har bedt om at hele prosjektet gjennomgås på nytt. Ingenting skal
+bygges om før valgene i `GJENNOMGANG.md` del 4 er avklart med brukeren.
 
 ## 0. PREMISSENDRING 02.09.2026 — EXCEL-KRAVET ER OPPHEVET
 
@@ -356,6 +367,11 @@ biprodukt.
 
 ## 6. FULL GJENNOMGANG — status for hvert valg
 
+**Se `GJENNOMGANG.md` for den fullstendige etterprøvingen.** Den ble gjort
+etter at denne tabellen ble skrevet, går dypere, og er reestimert fra
+kildedataene i stedet for å gjengi dokumentasjonen. Tabellen under er
+oversikten; `GJENNOMGANG.md` er innholdet.
+
 Brukeren har bedt om at hele prosjektet gjennomgås på nytt. Statusmerking:
 **REÅPNET** = må avgjøres på nytt, **BERØRT** = kan endres av et annet valg,
 **STÅR** = ikke berørt av premissendringen.
@@ -464,26 +480,54 @@ kan hentes fra containeren — egress-proxyen blokkerer alle. Må limes inn:
    scenariene spenner bare nedsiden og kan ikke kalibrere ytterkantene.
 5. Vis begge horisonter (2050/3 pst. + 2060/4 pst.).
 
-## Neste steg (prioritert)
-1. Brukeren limer inn IEA WEO Annex A-prisforutsetningene (kan ikke hentes fra
-   containeren — egress blokkert). To steder: `MAL` i `kalibrering.py`, og de
-   blå cellene B60-B63 i Forutsetninger. Da tennes NZE-sidescenarioet i
-   kolonne O (gir #N/A til da), og persentilavlesningen (STEPS P61 / NZE P0,5)
-   kan verifiseres mot faktiske tall i stedet for søketreff.
-3. Vurdere om persistent regime-trekk er nok, eller om det trengs år-til-år-
-   variasjon i tillegg (i dag er pris ren persistent faktor).
-4. Foredle tilbudsrespons: fra hardt 0-gulv til en balansepris-basert gradvis
-   nedstenging (bruk fordelingen ~20-45 USD fra slide 14).
-6. Integrere i leveransen: Excel-native motor (via `build_workbook.py`),
-   `mc_simulering.py`, regenerere figurer (`lag_figurer.py`), oppdatere CLAUDE.md.
-7. Rydde: filnavn `CLAUDE (1).md` → `CLAUDE.md`.
+## Neste steg (prioritert) — oppdatert 02.09.2026
+
+Rekkefølgen følger `GJENNOMGANG.md` del 4. Prisprosessen først, fordi den
+bestemmer forankringen og kalibreringen.
+
+1. **Prisprosessen.** Bygg to-faktor-prosessen: rask syklisk (halveringstid
+   ~3 år, bias-korrigert til ~8 år for olje) pluss langsom nivåfaktor
+   (halveringstid 20-30 år). Vis termstrukturen mot dagens modell og la
+   brukeren sette 2050-båndet. Se punkt 5 for trilemmaet og GJENNOMGANG del
+   2.1-2.3 for estimeringsproblemene.
+2. **Volumspennet.** Avklar om SDs høy/lav er ytterpunkter eller P10/P90.
+   Dagens triangulære vekt krymper spennet i 2050 fra 0,19-1,84 til
+   0,64-1,46. Stor effekt, udokumentert valg.
+3. **Statsandelen mot `Skiftberegning`-fanen** i kildefilen. Den har
+   marginalskattesats og gassprisgjennomslag til 2090 og brukes ikke i dag.
+   Konkret kryssjekk mot en kilde vi allerede har.
+4. **Diskonteringsrenten.** Drøft risikojustering eksplisitt. 3 mot 4 pst. er
+   ikke bare konvensjon.
+5. **Arkitektur og antall trekk.** Enkelt når 1-4 er avklart. 2 000 trekk gir
+   12 pst. frøavhengighet i P10; med Python er 200 000 gratis.
+6. **Kostnadsstruktur og gulv per felt.** Lavest prioritet — gulvet maskerer
+   effekten i dag, men koblingen bør dokumenteres.
+
+Uavhengig av rekkefølgen, når brukeren er innom IEA: lime inn WEO Annex A i
+`MAL` i `kalibrering.py` og i de blå cellene B60-B63 i Forutsetninger. Da
+tennes NZE-sidescenarioet (gir #N/A til da). Ikke haster.
+
+Ryddesak: filnavn `CLAUDE (1).md` → `CLAUDE.md`.
 
 ## Praktisk
-- Miljø: `pip install numpy openpyxl matplotlib cairosvg python-pptx`.
+- **Brukeren HAR Python på jobb** (avklart 02.09.2026). Leveransen trenger
+  ikke være Excel alene. Excel er fortsatt nyttig som presentasjonslag.
+- Miljø i containeren: `pip install numpy openpyxl matplotlib cairosvg
+  python-pptx formulas`.
+- Nettadgang: egress-proxyen blokkerer iea.org, iea.blob.core.windows.net,
+  regjeringen.no og alt annet direkte oppslag. Bare websøk kommer ut. Tall fra
+  eksterne kilder må limes inn av brukeren.
 - `soffice`/LibreOffice er ØDELAGT i containeren (kan ikke reberegne xlsx eller
   konvertere). Bruk `formulas`-biblioteket for å verifisere Excel-formler mot
   Python; bruk `cairosvg` for SVG→PNG QA.
 - FIN designprofil på figurer: `fin_chart_style.py` fra fin-designprofil-skillen.
   Arial mangler i containeren → faller tilbake på DejaVu Sans (sanksjonert).
 - Konfidensialitet: `Mulighetsbilde Petroleum.xlsx` ligger i repoet; brukeren
-  har valgt å beholde den (avvik fra CLAUDE.md-regel, men bevisst).
+  har valgt å beholde den (avvik fra CLAUDE.md-regel, men bevisst). Merk at
+  gjennomgangen 02.09 hentet historiske prisserier (KVARTS-fanen) og SNKS-banen
+  til 2090 (Formue rad 84) ut av den. Skal PR-en mot main i et delt repo, bør
+  filen ut og de nødvendige seriene ekstraheres til modellboken med
+  kildehenvisning, slik resten av tallgrunnlaget er håndtert.
+- Verifisering: `python3 verifiser_reformulert.py` (tar noen minutter, bygger
+  en liten testbok og evaluerer den med `formulas`). Skal ende med «Alle
+  kontroller passerte».
