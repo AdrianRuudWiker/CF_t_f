@@ -1,0 +1,16 @@
+# Interne kildefiler skal ALDRI committes.
+data/raw/Mulighetsbilde*.xlsx
+data/raw/*.pptx
+
+# Uttrukket mellomlag er reproduserbart, men committes for sporbarhet.
+# data/inndata.csv
+
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+output/figurer/*.svg
+output/figurer/*.png
+output/tabeller/*.xlsx

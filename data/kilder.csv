@@ -1,0 +1,22 @@
+serie,kilde,argang,filnavn,ark,celleomrade,uttrekksdato,offentlig,merknad
+produksjon_olje,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 30,,nei,
+produksjon_gass,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 31,,nei,
+produksjon_ngl,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 32,,nei,
+prisbane_olje,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 38,,nei,
+prisbane_gass,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 39,,nei,
+prisbane_ngl,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 40,,nei,
+driftsutgifter,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 55,,nei,paalopte
+investeringsutgifter,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 58,,nei,paalopte
+deflator,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 44,,nei,basisaar 2026
+snks,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Formue,rad 84,,nei,
+marginalskattesats,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Skiftberegning,rad 7,,nei,
+sdoe_andeler,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Skiftberegning,rad 37-39,,nei,per ressurs
+gassprisgjennomslag,Nasjonalbudsjettet 2026,NB26,Mulighetsbilde Petroleum.xlsx,Skiftberegning,rad 17,,nei,AAPENT PUNKT 2
+produksjon_sd_basis,Ressursrapport 2026,RR26,,,,,ja,MANGLER
+produksjon_sd_hoy,Ressursrapport 2026,RR26,,,,,ja,MANGLER - endret profil vs RR24
+produksjon_sd_lav,Ressursrapport 2026,RR26,,,,,ja,MANGLER
+realpris_wti,FRED WTISPLC,,,,,,ja,hentes av src/fred.py
+realpris_brent,FRED DCOILBRENTEU,,,,,,ja,hentes av src/fred.py
+kpi_us,FRED CPIAUCSL,,,,,,ja,hentes av src/fred.py
+implisitt_vol_olje,FRED OVXCLS,,,,,,ja,hentes av src/fred.py
+implisitt_vol_gass,Macrobond,,,,,,nei,MANGLER - se README
